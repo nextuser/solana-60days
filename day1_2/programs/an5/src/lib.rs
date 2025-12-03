@@ -18,8 +18,6 @@ pub mod an5 {
     }
 
 
-
-
     pub fn add(_ctx: Context<Initialize2>, a:u8,b:u8)-> Result<()> {
         let  v : u8 = a.checked_add(b).unwrap();
         msg!("add value: {}",&v);
