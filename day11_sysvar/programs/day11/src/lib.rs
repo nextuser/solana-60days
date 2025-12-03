@@ -1,4 +1,8 @@
 use anchor_lang::prelude::*;
+use anchor_lang::solana_program::{sysvar };
+
+use anchor_lang::{ solana_program::sysvar::instructions};
+
 
 declare_id!("BaaByxG745EDy4o7DdpyCvsq2CZSnQNX4fmvUkdEkkZf");
 
@@ -24,7 +28,14 @@ pub mod day11 {
         msg!("Day of the week {:?}", date_time.weekday());
         Ok(())
     }
-
+    // pub fn get_latest_blockhash(ctx: Context<GetBlockhash>) -> Result<()> {
+    //     // 从InstructionSysvar读取交易的recent_blockhash
+    //     let instruction_sysvar = InstructionSysvar::from_account_info(&ctx.accounts.instruction_sysvar)?;
+    //     let tx_blockhash = instruction_sysvar.recent_blockhash;
+        
+    //     msg!("交易携带的Recent Blockhash: {}", tx_blockhash);
+    //     Ok(())
+    // }
     pub fn get_blockhash(ctx: Context<VarAccount>) -> Result<()> {
 
         let accountInfo = &ctx.accounts.instruction_sysvar;
@@ -35,6 +46,17 @@ pub mod day11 {
         msg!("The recent block hash is: {:?}", data.blockhash);
         Ok(())
     }
+
+
+//     pub fn get_latest_blockhash(ctx: Context<GetBlockhash>) -> Result<()> {
+//         // 从InstructionSysvar读取交易的recent_blockhash
+//         let instruction_sysvar = InstructionSysvar::from_account_info(&ctx.accounts.instruction_sysvar)?;
+//         let tx_blockhash = instruction_sysvar.recent_blockhash;
+        
+//         msg!("交易携带的Recent Blockhash: {}", tx_blockhash);
+//         Ok(())
+//     }
+
 }
 
 #[derive(Accounts)]
@@ -48,3 +70,12 @@ pub struct VarAccount <'info> {
     /// CHECK: readonly
     pub instruction_sysvar: AccountInfo<'info>,
 }
+
+
+// #[derive(Accounts)]
+// pub struct GetBlockhash<'info> {
+//     #[sysvar]
+//     pub instruction_sysvar: AccountInfo<'info>, // 绑定InstructionSysvar
+
+// }
+

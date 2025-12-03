@@ -22,5 +22,14 @@ describe("day11", () => {
   it("blockhash",async()=>{
     const tx = await program.methods.getBlockhash().accounts({"instructionSysvar": anchor.web3.SYSVAR_RECENT_BLOCKHASHES_PUBKEY}).rpc();
     console.log("Your transaction signature", tx);
+    console.log("blockhash address", anchor.web3.SYSVAR_RECENT_BLOCKHASHES_PUBKEY.toBase58());
+    console.log("solana account ",anchor.web3.SYSVAR_RECENT_BLOCKHASHES_PUBKEY.toBase58());
   })
+
+  //   it("latest blockhash",async()=>{
+  //   const tx = await program.methods.getLatestBlockhash().accounts({"instructionSysvar": anchor.web3.SYSVAR_RECENT_BLOCKHASHES_PUBKEY}).rpc();
+  //   console.log("Your transaction signature", tx);
+  //   console.log("blockhash address", anchor.web3.SYSVAR_RECENT_BLOCKHASHES_PUBKEY.toBase58());
+  //   console.log("solana account ",anchor.web3.SYSVAR_RECENT_BLOCKHASHES_PUBKEY.toBase58());
+  // })
 });
