@@ -17,6 +17,12 @@ pub mod day4 {
         } else if(a > 100) {
             return err!(MyError::AisBig)
         }
+        msg!("limit_range call ,a is {}", a);
+        Ok(())
+    }
+
+    pub fn sayHello(ctx :Context<LimitRange> ) -> Result<()> {
+        msg!("sayHello call from {}", ctx.program_id);
         Ok(())
     }
 }

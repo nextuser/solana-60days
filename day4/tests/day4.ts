@@ -33,8 +33,14 @@ describe("day4", () => {
     } catch (e) {
       assert.isTrue(e instanceof anchor.AnchorError);
       assert.equal(e.error.errorMessage, "a is big");
-      console.log("limit range too big  is :",e);
+      console.log("limit range small, errorlog",e.errorLogs);
     }
    
   });
+
+
+    it("say hello", async () => {
+      let tx = await program.methods.sayHello().rpc();
+      console.log("tx:",tx);
+    });
 });
