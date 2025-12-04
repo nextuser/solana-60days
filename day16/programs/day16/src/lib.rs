@@ -45,6 +45,12 @@ pub mod day16 {
         msg!("key is {},value is {:?}", key, value);
         Ok(())
     }
+    pub fn set_map_data(ctx :Context<SetMapData>, key : u64,value : u64) -> Result<()> {
+        ctx.accounts.val.key = key;
+        ctx.accounts.val.value = value;
+        msg!("set map data : {} => {:?}", key, value);
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -113,4 +119,11 @@ pub struct MapData<'info>{
     #[account(mut)]
     signer:Signer<'info>,
     system_program:Program<'info,System>
+}
+
+#[derive(Accounts)]
+#[instruction(key:u64)]
+pub struct SetMapData<'info>{
+    #[account(mut)]
+    val :Account<'info , Val>,
 }

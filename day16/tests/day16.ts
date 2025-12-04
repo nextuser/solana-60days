@@ -1,6 +1,7 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { Day16 } from "../target/types/day16";
+const { expect } = require('chai');
 
 describe("day16", () => {
   // Configure the client to use the local cluster.
@@ -83,22 +84,43 @@ describe("day18_flag", async () => {
     })
 
 
-    it("init mapdata", async()=>{
+    // it("init mapdata", async()=>{
+    //     let key = new anchor.BN(35);
+    //     //u64, 8bytes
+    //     let seeds = [key.toArrayLike(Buffer,'le',8)];
+
+
+    //     const [mapDataAddress,_bump3] = anchor.web3.PublicKey.findProgramAddressSync(
+    //         seeds,program.programId);
+    //     const tx = await program.methods.initMapData(key,new anchor.BN(11) ).accounts({
+    //         signer:anchor.getProvider().publicKey,
+    //         val : mapDataAddress,
+    //     }).rpc();
+    //     await conn.confirmTransaction(tx)
+    //     console.log("init mapdata  tx signature:", tx);
+    //     const  mapdata = await program.account.val.fetch(mapDataAddress)
+    //     console.log("map data :",mapdata.key, mapdata.value);
+
+    // })
+
+    it("set mapdata", async()=>{
         let key = new anchor.BN(35);
+        let value = new anchor.BN(16)
         //u64, 8bytes
         let seeds = [key.toArrayLike(Buffer,'le',8)];
 
 
         const [mapDataAddress,_bump3] = anchor.web3.PublicKey.findProgramAddressSync(
             seeds,program.programId);
-        const tx = await program.methods.initMapData(key,new anchor.BN(11) ).accounts({
-            signer:anchor.getProvider().publicKey,
+        const tx = await program.methods.setMapData(key,value ).accounts({
             val : mapDataAddress,
         }).rpc();
         await conn.confirmTransaction(tx)
         console.log("init mapdata  tx signature:", tx);
         const  mapdata = await program.account.val.fetch(mapDataAddress)
         console.log("map data :",mapdata.key, mapdata.value);
+        expect(mapdata.value.toNumber()).to.equal(value.toNumber());
+        expect(mapdata.key.toNumber()).to.equal(key.toNumber());
 
     })
 });
