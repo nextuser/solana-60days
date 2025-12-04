@@ -38,6 +38,13 @@ pub mod day16 {
         msg!("set_flag :{}",value);
         Ok(())
     }
+
+    pub fn init_map_data(ctx :Context<MapData>, key : u64,value : u64) -> Result<()> {
+        ctx.accounts.val.key = key;
+        ctx.accounts.val.value = value;
+        msg!("key is {},value is {:?}", key, value);
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -85,4 +92,25 @@ pub struct InitFlag<'info>{
     system_program: Program<'info ,System>,
     #[account(init,payer=signer,space=size_of::<TrueOrFalse>()+8, seeds=[b"t"],bump)]
     true_or_false: Account<'info ,TrueOrFalse>,
+}
+
+
+#[account]
+pub struct Val{
+    pub key : u64,
+    pub value : u64,
+}
+
+#[derive(Accounts)]
+#[instruction(key:u64)]
+pub struct MapData<'info>{
+    #[account(init,
+    payer=signer,
+    space=size_of::<Val>() + 8,
+    seeds=[&key.to_le_bytes().as_ref()],
+    bump)]
+    val :Account<'info , Val>,
+    #[account(mut)]
+    signer:Signer<'info>,
+    system_program:Program<'info,System>
 }

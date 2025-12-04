@@ -81,4 +81,24 @@ describe("day18_flag", async () => {
         console.log("flag data :",flagData.flag);
 
     })
+
+
+    it("init mapdata", async()=>{
+        let key = new anchor.BN(35);
+        //u64, 8bytes
+        let seeds = [key.toArrayLike(Buffer,'le',8)];
+
+
+        const [mapDataAddress,_bump3] = anchor.web3.PublicKey.findProgramAddressSync(
+            seeds,program.programId);
+        const tx = await program.methods.initMapData(key,new anchor.BN(11) ).accounts({
+            signer:anchor.getProvider().publicKey,
+            val : mapDataAddress,
+        }).rpc();
+        await conn.confirmTransaction(tx)
+        console.log("init mapdata  tx signature:", tx);
+        const  mapdata = await program.account.val.fetch(mapDataAddress)
+        console.log("map data :",mapdata.key, mapdata.value);
+
+    })
 });
