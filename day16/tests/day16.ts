@@ -52,6 +52,11 @@ describe("day16", () => {
 
 });
 
+function asciiArrayToString(asciiArr) {
+  if (!Array.isArray(asciiArr)) return "";
+  return String.fromCharCode(...asciiArr);
+}
+
 describe("day18_flag", async () => {
     anchor.setProvider(anchor.AnchorProvider.env());
     const conn = anchor.getProvider().connection;
@@ -121,6 +126,68 @@ describe("day18_flag", async () => {
         console.log("map data :",mapdata.key, mapdata.value);
         expect(mapdata.value.toNumber()).to.equal(value.toNumber());
         expect(mapdata.key.toNumber()).to.equal(key.toNumber());
+
+    })
+    const randValue = Math.floor(Math.pow(2,Math.random()*32));
+    const mapInfoKey = new anchor.BN(randValue);
+    
+     it("init mapinfo", async()=>{
+        let key = mapInfoKey;
+        let value = "abc";
+        console.log("use mapinfo key:", key);
+        //u64, 8bytes
+        let seeds = [key.toArrayLike(Buffer,'le',8)];
+
+
+        const [mapInfoAddress,_bump3] = anchor.web3.PublicKey.findProgramAddressSync(
+            seeds,program.programId);
+        const tx = await program.methods.initMapInfo(key,value ).accounts({
+            signer:anchor.getProvider().publicKey,
+            info : mapInfoAddress,
+            systemProgram: anchor.web3.SystemProgram.programId  // 添加这一行
+        }).rpc();
+        await conn.confirmTransaction(tx)
+        console.log("init mapinfo  tx signature:", tx);
+        const  mapinfo = await program.account.info.fetch(mapInfoAddress)
+        //console.log("map data :",mapinfo.key, mapinfo.value);
+        expect(mapinfo.key.toNumber()).to.equal(key.toNumber());
+        expect(toString(mapinfo.value)).to.equal(value);
+
+    })
+
+    function toString(arr  :number[]):string{
+        let str = String.fromCharCode(...arr);
+        let index = str.indexOf("\x00");
+        if(index != -1){
+            str = str.substring(0,index);
+        }
+        index = str.indexOf("\u0000");
+        if(index != -1){
+            str = str.substring(0,index);
+        }
+
+        return str;
+    }
+    //console.log(toString([97, 98, 99, 33,0,0,0]));
+
+    it("set mapinfo", async()=>{
+        let key = mapInfoKey;
+        let value = "def";
+        //u64, 8bytes
+        let seeds = [key.toArrayLike(Buffer,'le',8)];
+
+
+        const [mapInfoAddress,_bump3] = anchor.web3.PublicKey.findProgramAddressSync(
+            seeds,program.programId);
+        const tx = await program.methods.setMapInfo(key,value ).accounts({
+            info : mapInfoAddress,
+        }).rpc();
+        await conn.confirmTransaction(tx)
+        console.log("init mapinfo  tx signature:", tx);
+        const  mapinfo = await program.account.info.fetch(mapInfoAddress)
+        console.log("map data :",mapinfo.key, mapinfo.value);
+        expect(toString(mapinfo.value)).to.equal(value);
+        expect(mapinfo.key.toNumber()).to.equal(key.toNumber());
 
     })
 });

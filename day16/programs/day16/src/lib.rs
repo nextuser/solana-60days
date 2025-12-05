@@ -1,3 +1,5 @@
+use std::collections::VecDeque;
+
 use anchor_lang::prelude::*;
 
 declare_id!("GmCqJpRBrJsTgXKNvRq8AqwXpjwUJJjDgcpzJdHCUgne");
@@ -51,6 +53,24 @@ pub mod day16 {
         msg!("set map data : {} => {:?}", key, value);
         Ok(())
     }
+
+    pub fn init_map_info(ctx :Context<InitMapInfo>, key : u64,value : String) -> Result<()> {
+        ctx.accounts.info.key = key;
+        // ctx.accounts.info.value.copy_from_slice(value.as_bytes());
+        copy_from_slice(value.as_bytes(),&mut ctx.accounts.info.value);
+        msg!("key is {},value is {:?}", key, value);
+        Ok(())
+    }
+    pub fn set_map_info(ctx :Context<SetMapInfo>, key : u64,value : String) -> Result<()> {
+        ctx.accounts.info.key = key;
+        // ctx.accounts.info.value.copy_from_slice(value.as_bytes());
+        copy_from_slice(value.as_bytes(),&mut ctx.accounts.info.value);
+        msg!("set map data : {} => {:?}", key, value);
+        Ok(())
+    }
+
+
+
 }
 
 #[derive(Accounts)]
@@ -127,3 +147,65 @@ pub struct SetMapData<'info>{
     #[account(mut)]
     val :Account<'info , Val>,
 }
+
+
+
+
+
+#[account]
+pub struct Info{
+    pub key : u64,
+    pub value : [u8;32],
+}
+
+#[derive(Accounts)]
+#[instruction(key:u64)]
+pub struct InitMapInfo<'info>{
+    #[account(init,
+    payer=signer,
+    space=size_of::<Info>() + 8,
+    seeds=[&key.to_le_bytes().as_ref()],
+    bump)]
+    info :Account<'info , Info>,
+    #[account(mut)]
+    signer:Signer<'info>,
+    system_program:Program<'info,System>
+}
+
+#[derive(Accounts)]
+#[instruction(key:u64)]
+pub struct SetMapInfo<'info>{
+    #[account(mut)]
+    info :Account<'info , Info>,
+}
+
+fn copy_from_slice(src:&[u8],dst:&mut [u8] ){
+    let max = src.len().min(dst.len());
+    for i in 0..max{    
+        dst[i] = src[i];
+    }
+}
+#[test]
+pub fn test_copy_slice(){
+    let a :String = String::from("abc");
+    let mut value :  [u8;32] = [0;32];
+    let bytes = a.as_bytes();
+    // let blen = bytes.len();
+    // let max = blen.min(bytes.len());
+
+    
+    // for i in 0..max{
+    //     value[i] = bytes[i];
+    // }
+    copy_from_slice(bytes,&mut value);
+    println!("{:?}",value);
+    //std::mem::copy_memory(value.as_mut_ptr(),a.as_ptr(),max);
+}
+
+
+
+
+
+
+
+
