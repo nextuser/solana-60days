@@ -18,33 +18,52 @@ async function confirmTransaction(tx:string) {
     });
 }
 
-describe("day24", () => {
+describe("day24",  () => {
   // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.AnchorProvider.env());
+    anchor.setProvider(anchor.AnchorProvider.env());
 
-  const program = anchor.workspace.day24 as Program<Day24>;
+    const program = anchor.workspace.day24 as Program<Day24>;
+    let seeds = [Buffer.from("a")];
+    const [myStorage,_bump] = anchor.web3.PublicKey.findProgramAddressSync(
+    seeds,program.programId
+    )
 
   it("Is initialized!", async () => {
-      let newKey = Keypair.generate();
-      await airdropSol(newKey.publicKey, 1e9);
-
-      let seeds = [Buffer.from("a")];
-      const [myStorage,_bump] = anchor.web3.PublicKey.findProgramAddressSync(
-          seeds,program.programId
-      )
-
-     console.log("balance is :" + await anchor.getProvider().connection.getBalance(newKey.publicKey));
+      let alice = Keypair.generate();
+      await airdropSol(alice.publicKey, 1e9);
+      console.log("user:",alice.publicKey.toBase58())
+    console.log("balance is :" + await anchor.getProvider().connection.getBalance(alice.publicKey));
     const tx = await program.methods.initialize().accounts({
         myStorage: myStorage,
         program:anchor.web3.SystemProgram.programId,
-        fren : newKey.publicKey
-    }).signers([newKey]).rpc();
+        fren : alice.publicKey
+    }).signers([alice]).rpc();
     console.log("Your transaction signature", tx);
     await  confirmTransaction(tx);
     //await anchor.getProvider().connection.confirmTransaction(tx);
     console.log("fetch logs")
-    await  getTransactionAnalysis(anchor.getProvider().connection, tx);
+    const detail = await  getTransactionAnalysis(anchor.getProvider().connection, tx);
+    console.log("tx detail",detail);
   });
+
+    it("update!", async () => {
+        let bob = Keypair.generate();
+        await airdropSol(bob.publicKey, 1e9);
+        console.log("user:",bob.publicKey.toBase58())
+        console.log("balance is :" + await anchor.getProvider().connection.getBalance(bob.publicKey));
+        const tx = await program.methods.update(new anchor.BN(33)).accounts({
+            myStorage: myStorage,
+            program:anchor.web3.SystemProgram.programId,
+            fren : bob.publicKey
+        }).signers([bob]).rpc();
+        console.log("Your transaction signature", tx);
+        await  confirmTransaction(tx);
+        //await anchor.getProvider().connection.confirmTransaction(tx);
+        console.log("fetch logs")
+        const detail = await  getTransactionAnalysis(anchor.getProvider().connection, tx);
+        console.log("tx detail",detail);
+    });
+
 });
 
 /**
