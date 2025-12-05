@@ -26,7 +26,7 @@ describe("day11", () => {
     console.log("blockhash address", anchor.web3.SYSVAR_RECENT_BLOCKHASHES_PUBKEY.toBase58());
     console.log("solana account ",anchor.web3.SYSVAR_RECENT_BLOCKHASHES_PUBKEY.toBase58());
     const detail = await getTransactionAnalysis(connection,tx);
-    console.log("tranaciton detail :",detail);
+    console.log("blockhash tranaciton detail :",detail);
   })
 
 
@@ -36,14 +36,23 @@ describe("day11", () => {
             const tx = await program.methods.getSysVars().accounts(
                 {
                     "blockHashVar": anchor.web3.SYSVAR_RECENT_BLOCKHASHES_PUBKEY,
-                    "stakeHistoryVar": anchor.web3.SYSVAR_STAKE_HISTORY_PUBKEY
+                    "stakeHistoryVar": anchor.web3.SYSVAR_STAKE_HISTORY_PUBKEY,
+                    "instructionSysvar": anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
                 }).rpc();
             console.log("Your transaction signature", tx);
+            await connection.confirmTransaction(tx);
+            const detail = await getTransactionAnalysis(connection,tx);
+            console.log("sys vars tranaciton detail :",detail);
         }catch(e){
             console.log("getSysVars error:",e);
         }
     // console.log("blockhash address", anchor.web3.SYSVAR_RECENT_BLOCKHASHES_PUBKEY.toBase58());
     // console.log("solana account ",anchor.web3.SYSVAR_RECENT_BLOCKHASHES_PUBKEY.toBase58());
+  })
+
+  it("get stake history" ,async()=>{ 
+    const tx = await program.methods.getStakeHistory().accounts({"stakeHistory": anchor.web3.SYSVAR_STAKE_HISTORY_PUBKEY}).rpc();
+    console.log("Your transaction signature", tx);
   })
 
 
