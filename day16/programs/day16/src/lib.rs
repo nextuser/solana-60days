@@ -68,9 +68,6 @@ pub mod day16 {
         msg!("set map data : {} => {:?}", key, value);
         Ok(())
     }
-
-
-
 }
 
 #[derive(Accounts)]
@@ -149,9 +146,6 @@ pub struct SetMapData<'info>{
 }
 
 
-
-
-
 #[account]
 pub struct Info{
     pub key : u64,
@@ -201,11 +195,4 @@ pub fn test_copy_slice(){
     println!("{:?}",value);
     //std::mem::copy_memory(value.as_mut_ptr(),a.as_ptr(),max);
 }
-
-
-
-
-
-
-
 
