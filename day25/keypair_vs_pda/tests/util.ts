@@ -71,3 +71,16 @@ export async function confirmTransaction(connection : Connection, tx:string) {
         signature: tx,
     });
 }
+
+export async function printAccount(conn,pubKey:PublicKey,prompt){
+    let accountInfo :anchor.web3.AccountInfo<Buffer> = await conn.getAccountInfo(pubKey)
+    if(!accountInfo){
+        console.log(prompt,"Acount of Address", null);
+        return;
+    }
+    console.log(prompt,
+        "Account of Address:",pubKey.toBase58(),
+        "lamports",accountInfo.lamports,
+        "space",accountInfo.space,
+        "owner:",accountInfo.owner)
+}

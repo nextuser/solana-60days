@@ -2,7 +2,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 
 import { KeypairVsPda } from "../target/types/keypair_vs_pda";
-import {airdropSol,getTransactionDetials,confirmTransaction} from "./util";
+import {airdropSol, getTransactionDetials, confirmTransaction, printAccount} from "./util";
 
 describe("keypair_vs_pda", () => {
   // Configure the client to use the local cluster.
@@ -10,16 +10,12 @@ describe("keypair_vs_pda", () => {
   const conn = anchor.getProvider().connection;
 
   const program = anchor.workspace.keypairVsPda as Program<KeypairVsPda>;
-  const dataKey = anchor.web3.Keypair.generate();
-  console.log("alice:", dataKey.publicKey.toBase58());
 
-  it("Is initialized!", async () => {
-    let accountInfo :anchor.web3.AccountInfo = await conn.getAccountInfo(dataKey.publicKey)
-      if(accountInfo != null) {
-          console.log("before init :data key info :", accountInfo.lamports, accountInfo.data.length)
-      } else{
-          console.log("accountInfo null");
-      }
+
+  it("keypair address init ", async () => {
+      const dataKey = anchor.web3.Keypair.generate();
+    await printAccount(conn,dataKey.publicKey,"before init data key info :");
+
     // Add your test here.
     const tx = await program.methods.initialize(new anchor.BN(88)).accounts({
         myKeypairAccount : dataKey.publicKey,
@@ -28,13 +24,44 @@ describe("keypair_vs_pda", () => {
     }).signers([dataKey,anchor.getProvider().wallet.payer]).rpc();
     await confirmTransaction(conn,tx);
     const detail = await getTransactionDetials(conn,tx);
-    accountInfo = await conn.getAccountInfo(dataKey.publicKey)
-    console.log("after init data key info :",
-        "lamports",accountInfo.lamports,
-        "space",accountInfo.space,
-        "owner:",accountInfo.owner)
+    await printAccount(conn,dataKey.publicKey,"after init data key info :");
+
     console.log('tx detail :',detail);
-    
-    console.log("Your transaction signature", tx);
   });
+
+
+    it("keypair address init with sol", async () => {
+        const dataKey = anchor.web3.Keypair.generate();
+        await airdropSol(conn,dataKey.publicKey,1e9);
+        await printAccount(conn,dataKey.publicKey,"before init data key info :");
+        // Add your test here.
+        const tx = await program.methods.initialize(new anchor.BN(88)).accounts({
+            myKeypairAccount : dataKey.publicKey,
+            signer : anchor.getProvider().publicKey,
+            systemProgram : anchor.web3.SystemProgram.programId,
+        }).signers([dataKey,anchor.getProvider().wallet.payer]).rpc();
+        await confirmTransaction(conn,tx);
+        const detail = await getTransactionDetials(conn,tx);
+        await printAccount(conn,dataKey.publicKey,"after init data key info :");
+        console.log('tx detail :',detail);
+    });
+
+
+    // it("keypair address init by other will crash", async () => {
+    //     const dataKey = anchor.web3.Keypair.generate();
+    //     const other = anchor.web3.Keypair.generate();
+    //     //await airdropSol(conn,dataKey.publicKey,1e9);
+    //     await airdropSol(conn,other.publicKey,1e9);
+    //     await printAccount(conn,dataKey.publicKey,"before init data key info :");
+    //     // Add your test here.
+    //     const tx = await program.methods.initialize(new anchor.BN(88)).accounts({
+    //         myKeypairAccount : dataKey.publicKey,
+    //         signer : anchor.getProvider().publicKey,
+    //         systemProgram : anchor.web3.SystemProgram.programId,
+    //     }).signers([other,anchor.getProvider().wallet.payer]).rpc();
+    //     await confirmTransaction(conn,tx);
+    //     const detail = await getTransactionDetials(conn,tx);
+    //     await printAccount(conn,dataKey.publicKey,"after init data key info :");
+    //     console.log('tx detail :',detail);
+    // });
 });
