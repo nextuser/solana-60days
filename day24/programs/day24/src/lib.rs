@@ -17,6 +17,22 @@ pub mod day24 {
         msg!("day24 update: by {:?} x={}",bs58::encode(&ctx.accounts.fren.key).into_string(),value);
         Ok(())
     }
+
+
+    pub fn init_player(ctx:Context<InitPlayer>) -> Result<()>{
+        ctx.accounts.player.authority = ctx.accounts.signer.key();
+        ctx.accounts.player.points = 10000;
+        msg!("init player");
+        Ok(())
+    }
+
+    pub fn transfer_points(ctx:Context<TrasferPoints>,points:u64) -> Result<()>{ 
+        require!(ctx.accounts.from.authority == ctx.accounts.signer.key(), Errors::SignerNotAuthorized);
+        require!(points <= ctx.accounts.from.points, Errors::InsurfficientPoints);
+        ctx.accounts.from.points -= points;
+        ctx.accounts.to.points += points;
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -41,3 +57,42 @@ pub struct UpldateValues<'info>{
     pub fren : Signer<'info>
 
 }
+
+#[error_code]
+pub enum Errors{
+    #[msg("Not enough points")]
+    InsurfficientPoints,
+    #[msg("Signer is Not Authorized")]
+    SignerNotAuthorized,
+}
+    
+
+
+#[account]
+pub struct Player{
+    pub authority: Pubkey,
+    pub points: u64,
+}
+
+#[derive(Accounts)]
+pub struct InitPlayer<'info>{
+    #[account(init,
+        payer=signer,
+        space=size_of::<Player>() + 8,
+        seeds=[&signer.as_ref().key().to_bytes()],
+        bump)]
+    pub player: Account<'info, Player>,
+    #[account(mut)]
+    pub signer: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}   
+#[derive(Accounts)]
+pub struct TrasferPoints<'info>{
+    #[account(mut)]
+    from : Account<'info,Player>,
+    #[account(mut)]
+    to : Account<'info,Player>,
+    signer: Signer<'info>,
+}
+
+
