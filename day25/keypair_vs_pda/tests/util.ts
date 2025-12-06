@@ -1,7 +1,8 @@
 import * as anchor from "@coral-xyz/anchor";
-const { Connection, PublicKey } = anchor.web3;
+const { Connection, PublicKey,Keypair } = anchor.web3;
 type Connection = anchor.web3.Connection;
 type PublicKey = anchor.web3.PublicKey;
+type Keypair = anchor.web3.Keypair;
 
 /**
  * 交易分析返回值类型
@@ -75,12 +76,30 @@ export async function confirmTransaction(connection : Connection, tx:string) {
 export async function printAccount(conn,pubKey:PublicKey,prompt){
     let accountInfo :anchor.web3.AccountInfo<Buffer> = await conn.getAccountInfo(pubKey)
     if(!accountInfo){
-        console.log(prompt,"Acount of Address", null);
+        console.log(prompt,`Acount of Address ${pubKey.toBase58()}:`, null);
         return;
     }
     console.log(prompt,
-        "Account of Address:",pubKey.toBase58(),
+        `Acount of Address ${pubKey.toBase58()}:`,pubKey.toBase58(),
         "lamports",accountInfo.lamports,
         "space",accountInfo.space,
         "owner:",accountInfo.owner)
+}
+
+export async function transfer_and_print(conn:Connection, sender:Keypair, receiver:PublicKey, amount :number,prompt: string = "" ){
+
+    await printAccount(conn,sender.publicKey,prompt + " before transfer :");
+    await printAccount(conn,receiver,prompt + " before transfer :")
+    var trans2 = new anchor.web3.Transaction().add(
+        anchor.web3.SystemProgram.transfer({
+            fromPubkey:sender.publicKey,
+            toPubkey: receiver,
+            lamports: 1e8,
+        })
+    )
+    await anchor.web3.sendAndConfirmTransaction(conn,trans2,[sender]);
+
+
+    await printAccount(conn,sender.publicKey,prompt +" after transfer :");
+    await printAccount(conn,receiver,prompt + " after transfer :")
 }
