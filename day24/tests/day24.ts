@@ -21,9 +21,6 @@ async function confirmTransaction(tx:string) {
 anchor.setProvider(anchor.AnchorProvider.env());
 
 describe("day24_update_by_other",  () => {
-  // Configure the client to use the local cluster.
-  //   /anchor.setProvider(anchor.AnchorProvider.env());
-
     const program = anchor.workspace.day24 as Program<Day24>;
     let seeds = [Buffer.from("a")];
     const [myStorage,_bump] = anchor.web3.PublicKey.findProgramAddressSync(
@@ -127,7 +124,7 @@ describe("day24_transfer",  () => {
         const tx = await program.methods.transferPoints(new anchor.BN(33)).accounts({
             from: alice_player,
             to: bob_player,
-            signer: alice.publicKey
+            authority: alice.publicKey
         }).signers([alice]).rpc();
         console.log("Your transaction signature", tx);
         await confirmTransaction(tx);

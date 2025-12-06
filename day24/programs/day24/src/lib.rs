@@ -26,11 +26,11 @@ pub mod day24 {
         Ok(())
     }
 
-    pub fn transfer_points(ctx:Context<TrasferPoints>,points:u64) -> Result<()>{ 
-        require!(ctx.accounts.from.authority == ctx.accounts.signer.key(), Errors::SignerNotAuthorized);
-        require!(points <= ctx.accounts.from.points, Errors::InsurfficientPoints);
-        ctx.accounts.from.points -= points;
-        ctx.accounts.to.points += points;
+    pub fn transfer_points(ctx:Context<TrasferPoints>,amount:u64) -> Result<()>{
+        // require!(ctx.accounts.from.authority == ctx.accounts.authority.key(), Errors::SignerNotAuthorized);
+        // require!(amount <= ctx.accounts.from.points, Errors::InsurfficientPoints);
+        ctx.accounts.from.points -= amount;
+        ctx.accounts.to.points += amount;
         Ok(())
     }
 }
@@ -87,12 +87,13 @@ pub struct InitPlayer<'info>{
     pub system_program: Program<'info, System>,
 }   
 #[derive(Accounts)]
+#[instruction(amount:u64)]
 pub struct TrasferPoints<'info>{
-    #[account(mut)]
+    #[account(mut,has_one=authority, constraint = from.points >= amount)]
     from : Account<'info,Player>,
     #[account(mut)]
     to : Account<'info,Player>,
-    signer: Signer<'info>,
+    authority: Signer<'info>,
 }
 
 
