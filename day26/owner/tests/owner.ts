@@ -34,7 +34,7 @@ describe("owner", () => {
     console.log("Your transaction signature", tx);
   });
 
-    it("initial pda!", async () => {
+    it("initial pda and change owner!", async () => {
         let [pda,_bump] =  anchor.web3.PublicKey.findProgramAddressSync(
             [],
             program.programId
@@ -51,5 +51,14 @@ describe("owner", () => {
         await confirmAndPrintTxDetails(conn,tx);
         await printAccount(conn,pda, "after init pda");
         console.log("Your transaction signature", tx);
+
+        await printAccount(conn,payer.publicKey, "payer before change owner")
+        let txChangeOwenr = await program.methods.changeOwner()
+            .accounts({
+                data:pda,
+            })
+            .rpc();
+        await printAccount(conn,payer.publicKey, "payer after change owner")
+        await printAccount(conn, pda, "pda after change owner");
     });
 });
