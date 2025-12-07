@@ -9,18 +9,21 @@ pub mod donate {
 
     use super::*;
 
+
+
+
     pub fn donate(ctx:Context<Donate>, amount: u64) ->Result<()>{
         let system_program_account = ctx.accounts.system_program.to_account_info();
-        let system_program_id = system_program::ID;
         //如果没有初始化,其实init_if_needed 会真的初始化完成
-         if ctx.accounts.pda.to_account_info().data_is_empty() ||
-            ctx.accounts.pda.withdrawer == system_program_id
+        //  if ctx.accounts.pda.to_account_info().data_is_empty() ||
+        //     ctx.accounts.pda.withdrawer == system_program_id
+        if is_init_state(&ctx.accounts.pda)
         {
             ctx.accounts.pda.withdrawer = * ctx.accounts.withdrawer.key;
             msg!("donate init withrawer.key: {},pda.withdray={}", ctx.accounts.withdrawer.key.to_string(),ctx.accounts.pda.withdrawer.to_string());
           } else {
             
-            require!(ctx.accounts.pda.withdrawer == *ctx.accounts.withdrawer.key, ErrorCodes::MismatchWithdrawer);
+            require!(ctx.accounts.pda.withdrawer == *ctx.accounts.withdrawer.key, ErrorCodes::DonateMismatchWithdrawer);
          }
 
         let tansfer_accounts  =             anchor_lang::system_program::Transfer{
@@ -57,6 +60,13 @@ pub mod donate {
     
     }
 }
+
+    fn is_init_state(pda: &Account<Pda>) -> bool {
+        let info = pda.to_account_info();
+        info.get_lamports() == 0 || * info.owner == system_program::ID ||
+        pda.withdrawer == Pubkey::default()
+    }
+
 
 #[error_code]
 pub enum ErrorCodes{
