@@ -29,7 +29,7 @@ pub mod spl_token {
     pub fn transfer_spl(ctx:Context<TransferSpl>,amount : u64)-> Result<()>{ 
         let from =  ctx.accounts.from_ata.clone().to_account_info();
         let to = ctx.accounts.to_ata.clone().to_account_info();
-        let authority = ctx.accounts.from.clone().to_account_info();
+        let authority = ctx.accounts.from_authority.clone().to_account_info();
         let token_program = ctx.accounts.token_program.clone().to_account_info();
 
         let cpi_ctx = CpiContext::new(
@@ -84,6 +84,6 @@ pub struct TransferSpl<'info>{
     #[account(mut)]
     pub to_ata:Account<'info,TokenAccount>,
     #[account(mut)]
-    pub from : Signer<'info>,
+    pub from_authority: Signer<'info>,
     token_program: Program<'info,Token>,
 }

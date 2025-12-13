@@ -2,7 +2,8 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey} from "@solana/web3.js";
 import * as splToken from "@solana/spl-token";
-import {SplToken } from "../target/types/spl_token";
+import {TOKEN_PROGRAM_ID,ASSOCIATED_TOKEN_PROGRAM_ID,getOrCreateAssociatedTokenAccount} from "@solana/spl-token";
+import {SplToken ,} from "../target/types/spl_token";
 import { airdropSol, confirmAndPrintTxDetails, generateKeypairWithSol } from "./util";
 type Connection = anchor.web3.Connection;
 function generateTokenName(){
@@ -18,8 +19,9 @@ describe("spl_token", () => {
   const program = anchor.workspace.splToken as Program<SplToken>;
 
   const provider = anchor.getProvider();
+  // A   , A mintTo B ,  B  transferTo C
   const signerKp = provider.wallet.payer;
-  const toKp = anchor.web3.Keypair.generate();
+
   //考虑到每次调用例子的时候，如果token已经存在，会报错，所以这里每次调用都生成一个新的tokenName
   const tokenName = generateTokenName();
   const mintToKeypair = Keypair.generate();
@@ -28,15 +30,20 @@ describe("spl_token", () => {
     [signerKp.publicKey.toBuffer(),Buffer.from(tokenName)],
     program.programId
   );
+
+
   const fromAta = splToken.getAssociatedTokenAddressSync(
     mint,
     mintToKeypair.publicKey,
     false);
-
-  const toAta = splToken.getAssociatedTokenAddressSync(
-    mint,
-    toKp.publicKey,
-    false);
+    // 不能使用airdrop方式来初始化这个地址，因为如果这样初始化，地址的owner会是system program
+  // const toAta = splToken.getAssociatedTokenAddressSync(
+  //   mint,
+  //   toKp.publicKey,
+  //   false);
+  //toATA 需要付租金 ， fromAta在调用时初始化
+      // const ata_rent_amount = await splToken.getMinimumBalanceForRentExemptAccount(conn);
+      //  await airdropSol(conn, toAta, ata_rent_amount)
   
 
   it("Is initialized!", async () => {
@@ -63,29 +70,43 @@ describe("spl_token", () => {
 
   it("transfer token",async()=>{
     try{
-      await airdropSol(conn, mintToKeypair.publicKey, 10 * LAMPORTS_PER_SOL)
-      await airdropSol(conn, toKp.publicKey, 10 * LAMPORTS_PER_SOL)
 
-      //toATA 需要付租金 ， fromAta在调用时初始化
-      const ata_rent_amount = await splToken.getMinimumBalanceForRentExemptAccount(conn);
-      await airdropSol(conn, toAta, ata_rent_amount)
+
+      console.log("mintToKeypair: ",mintToKeypair.publicKey.toBase58())
+      const toKp = anchor.web3.Keypair.generate();
+
+      await airdropSol(conn, toKp.publicKey, 10 * LAMPORTS_PER_SOL)
+      const owner = toKp.publicKey;
+      const payer = signerKp;
+
+
+      const toAtaAccount = await getOrCreateAssociatedTokenAccount(
+        conn,
+        payer,
+        mint,
+        owner,
+        true);
+      const toAta = toAtaAccount.address;
+
+      console.log("toAta: ",toAta.toBase58())
+     
       const tx = await program.methods
         .transferSpl(new anchor.BN(2e9))
         .accounts({
           fromAta: fromAta,
           toAta: toAta,
-          from: mintToKeypair.publicKey,
-          tokenProgram: splToken.TOKEN_PROGRAM_ID,
+          fromAuthority: mintToKeypair.publicKey,
         }).signers([mintToKeypair])
         .rpc();
 
         await confirmAndPrintTxDetails(conn,tx);
 
         const mintInfo = await getMintInfo(conn,mint);
-        printTokenBalance(conn,mintToKeypair.publicKey,mintInfo.decimals)
-        printTokenBalance(conn,toKp.publicKey,mintInfo.decimals)
+        await printTokenBalance(conn,fromAta,mintInfo.decimals)
+        await printTokenBalance(conn,toAta,mintInfo.decimals)
     }catch(e){
       console.log(e)
+      throw e;
     }
 
   })
