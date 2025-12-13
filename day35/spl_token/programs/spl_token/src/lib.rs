@@ -6,8 +6,7 @@ declare_id!("4CCTDw86fsubQZNNVnUhVGr2NytmQupShaxnhabyHa6Q");
 #[program]
 pub mod spl_token {
     use super::*;
-    pub fn create_and_mint_token(ctx:Context<CreateMint>,token_name:String)->Result<()>{
-        let mint_amonunt = 100_000_000_000;
+    pub fn create_and_mint_token(ctx:Context<CreateMint>,token_name:String,mint_amount:u64)->Result<()>{
         let mint = ctx.accounts.new_mint.clone();
         let dest_ata = &ctx.accounts.new_ata;
         let token_program = ctx.accounts.token_program.clone();
@@ -20,7 +19,7 @@ pub mod spl_token {
 
         let cpi_ctx = CpiContext::new(
             token_program.to_account_info(), mint_to_instruction);
-        token::mint_to(cpi_ctx, mint_amonunt)?;
+        token::mint_to(cpi_ctx, mint_amount)?;
 
         Ok(())
         

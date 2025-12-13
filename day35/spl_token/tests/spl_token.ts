@@ -50,7 +50,7 @@ describe("spl_token", () => {
     
     
     // Add your test here.
-    const tx = await program.methods.createAndMintToken(tokenName)
+    const tx = await program.methods.createAndMintToken(tokenName,new anchor.BN(10*1e9))
       .accounts({
         signer: signerKp.publicKey,
         tokenProgram: splToken.TOKEN_PROGRAM_ID,
