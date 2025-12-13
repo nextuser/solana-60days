@@ -26,6 +26,25 @@ pub mod spl_token {
         
     }
 
+    pub fn transfer_spl(ctx:Context<TransferSpl>,amount : u64)-> Result<()>{ 
+        let from =  ctx.accounts.from_ata.clone().to_account_info();
+        let to = ctx.accounts.to_ata.clone().to_account_info();
+        let authority = ctx.accounts.from.clone().to_account_info();
+        let token_program = ctx.accounts.token_program.clone().to_account_info();
+
+        let cpi_ctx = CpiContext::new(
+            token_program,
+            token::Transfer{
+                from:from,
+                to:to,
+                authority:authority,
+            }
+        );
+        token::transfer(cpi_ctx, amount)?;
+        Ok(())
+    }
+
+
 
 }
 
@@ -44,12 +63,27 @@ pub struct CreateMint<'info> {
     pub new_mint : Account<'info,Mint>,
     #[account(init ,
         payer = signer,
-        associated_token::authority = signer,
+        associated_token::authority = ata_authority,
         associated_token::mint = new_mint
     )]   
     pub new_ata:Account<'info,TokenAccount>,
 
+    /// CHECK:     ata authority
+    pub ata_authority:AccountInfo<'info>,
+
     pub token_program: Program<'info,Token>,
     pub associated_token_program: Program<'info,AssociatedToken>,
     pub system_program: Program<'info,System>,
+}
+
+#[derive(Accounts)]
+pub struct TransferSpl<'info>{
+
+    #[account(mut)]
+    pub from_ata:Account<'info,TokenAccount>,
+    #[account(mut)]
+    pub to_ata:Account<'info,TokenAccount>,
+    #[account(mut)]
+    pub from : Signer<'info>,
+    token_program: Program<'info,Token>,
 }
