@@ -61,10 +61,15 @@ describe("spl_token", () => {
         ataAuthority: mintToKeypair.publicKey,
       })
       .rpc();
-    console.log("Your transaction signature", tx);
-    console.log("Mint: ", mint.toBase58());
-    console.log("ATA: ", fromAta.toBase58());
-    console.log("Mint Info: ", await getMintInfo(provider.connection, mint));
+    const mintInfo = await getMintInfo(provider.connection, mint)
+    console.log(`create Mint ${mint.toBase58()} by payer ${signerKp.publicKey.toBase58()}  \n`,
+                `expected mint authority:${mintToKeypair.publicKey.toBase58()} \n`,
+                `actual mint authority:${mintInfo.mintAuthority} \n`,
+                `expected ata authority :${mintToKeypair.publicKey.toBase58()}},signature: ${tx}`);
+    const ataAccount = await splToken.getAccount(provider.connection, fromAta);
+    console.log("ata amount:", ataAccount.amount, 
+                "\nata authority",ataAccount.owner.toBase58());
+  
   });
 
 
