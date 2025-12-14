@@ -64,10 +64,14 @@ export async function getTransactionDetials(
 export async function confirmAndPrintTxDetails(
     connection: anchor.web3.Connection,
     signature: string,
-    commitment: anchor.web3.Commitment = "confirmed"
+    commitment: anchor.web3.Commitment = "confirmed",
+    prompt:string = ''
 ): Promise<TransactionDetails | null> {
 
     try {
+        if(prompt ){
+            console.log(confirmAndPrintTxDetails ,prompt);
+        }
         await confirmTransaction(connection, signature);
 
         // 获取交易详情
