@@ -27,6 +27,7 @@ describe("token_sale", () => {
   const TOKENS_PER_BUY = 100;
 
   it("Is initialized!", async () => {
+    await airdropSol(conn, treasury, 1);
     // Add your test here.
     const tx = await program.methods.initialize().accounts({
       adminConfig: adminConfig.publicKey,
@@ -71,8 +72,7 @@ describe("token_sale", () => {
     */
 
 
-        const tx = await program.methods
-        .mint(new anchor.BN(LAMPORTS_PER_SOL)).accounts({
+        const tx = await program.methods.mint(new anchor.BN(LAMPORTS_PER_SOL)).accounts({
           buyer: buyer.publicKey,
           buyerAta: buyerAta,
           mint: mint,

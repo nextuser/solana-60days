@@ -5,7 +5,7 @@ import { Keypair, LAMPORTS_PER_SOL, PublicKey,SystemProgram } from "@solana/web3
 import { TOKEN_PROGRAM_ID,ASSOCIATED_TOKEN_PROGRAM_ID ,createAssociatedTokenAccount,getAccount} from "@solana/spl-token";
 import {airdropSol, confirmAndPrintTxDetails} from './util'
 
-describe("cpi_new_signer", () => {
+describe("token_sale", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
 

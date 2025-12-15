@@ -7,6 +7,7 @@ skip-lint = false
 
 [programs.localnet]
 cpi_new_signer = "5d5hvdGFEyKfYFTf9wgeki8v3GxhCktntAMygB6BDuyP"
+pda_by_program = "7UduVVa9aMtcdg2dFzkY1TeGGwyJQTN22AUBqVzyYveZ"
 token_sale = "3DiCCp2ZLQxaR6Po4osjoCZbicH1menxLsrHqF5Q82xa"
 
 [registry]

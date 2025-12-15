@@ -1,13 +1,14 @@
-use std::thread::current;
-
 use anchor_lang::prelude::*;
-use anchor_lang::system_program::{transfer,Transfer};
+use anchor_lang::system_program::{
+    transfer,
+    Transfer,
+};
 use anchor_spl::token::{Mint, Token, TokenAccount,mint_to,MintTo};
 
 declare_id!("3DiCCp2ZLQxaR6Po4osjoCZbicH1menxLsrHqF5Q82xa");
 
 const TOKEN_PER_SOL : u64 = 100;
-const SUPPLY_CAP : u64 = 1000 * 1000_000_000    ;
+const SUPPLY_LIMIT : u64 = 1000 * 1000_000_000    ;
 
 #[program]
 pub mod token_sale {
@@ -17,6 +18,9 @@ pub mod token_sale {
         msg!("Greetings from: {:?}", ctx.program_id);
         
         ctx.accounts.admin_config.admin = ctx.accounts.admin.key();
+        
+        //create_pda_account(ctx)?;
+        
         Ok(())
     }
 
@@ -26,7 +30,7 @@ pub mod token_sale {
         let current_supply = ctx.accounts.mint.supply;
         let new_supply = current_supply.checked_add(amount).ok_or(Errors::Overflow)?;
 
-        require!(new_supply <= SUPPLY_CAP, Errors::SupplyLimit);
+        require!(new_supply <= SUPPLY_LIMIT, Errors::SupplyLimit);
         let transfer_intruction = Transfer{
             from : ctx.accounts.buyer.to_account_info(),
             to:ctx.accounts.treasury.to_account_info(),
@@ -48,18 +52,21 @@ pub mod token_sale {
             authority:ctx.accounts.mint.to_account_info(),
         };
 
-        let cpi_ctx2 = CpiContext::new_with_signer(
+        let cpi_ctx: CpiContext<'_, '_, '_, '_, MintTo<'_>> = CpiContext::new_with_signer(
             ctx.accounts.token_program.to_account_info(),
             mint_to_instruction,
             signer_seeds,
         );
-        mint_to(cpi_ctx2, amount)?;
+        
+        mint_to(cpi_ctx, amount)?;
         
         Ok(())
 
     }
 
 }
+
+
 
 #[derive(Accounts)]
 pub struct Initialize <'info>{
@@ -89,19 +96,29 @@ pub struct Initialize <'info>{
     #[account(
         init,
         payer= admin,
-        space= 8,
+        space = 0,
         seeds=[b"treasury"],
-        bump
+        bump,
     )]
     pub treasury:AccountInfo<'info>,
     pub token_program: Program<'info, Token>, 
     pub system_program:Program<'info, System>,
-
 }
+
+#[account]
+pub struct AdminConfig{
+    pub admin : Pubkey,
+}
+
+
+
 #[derive(Accounts)]
-pub struct MintTokens<'info>{
+pub struct   MintTokens<'info>{
     #[account(mut)]
     pub buyer : Signer<'info>,
+    /// CHECK:
+    pub admin:AccountInfo<'info>,
+       
     #[account(
         mut,
         seeds=[b"token_mint"],
@@ -119,7 +136,7 @@ pub struct MintTokens<'info>{
     #[account(
         mut,
         seeds=[b"treasury"],
-        bump
+        bump,
     )]
     pub treasury : AccountInfo<'info>,
     
@@ -128,10 +145,7 @@ pub struct MintTokens<'info>{
     pub system_program : Program<'info, System>,
 }
 
-#[account]
-pub struct AdminConfig{
-    pub admin : Pubkey,
-}
+
 
 #[error_code]
 pub enum Errors{

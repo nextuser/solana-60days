@@ -1054,6 +1054,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "pda_by_program"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+]
+
+[[package]]
 name = "percent-encoding"
 version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

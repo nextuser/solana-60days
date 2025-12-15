@@ -70,7 +70,7 @@ export async function confirmAndPrintTxDetails(
 
     try {
         if(prompt ){
-            console.log(confirmAndPrintTxDetails ,prompt);
+            console.log("confirmAndPrintTxDetails" ,prompt);
         }
         await confirmTransaction(connection, signature);
 
