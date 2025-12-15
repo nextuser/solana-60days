@@ -92,7 +92,7 @@ pub struct Initialize <'info>{
     )]
     pub mint:Account<'info,Mint>,
     
-    /// CHECK:
+    /// CHECK:  这里和rareskill的不同，需要initialize treasury account
     #[account(
         init,
         payer= admin,
