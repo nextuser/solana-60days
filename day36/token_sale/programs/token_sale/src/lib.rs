@@ -19,7 +19,6 @@ pub mod token_sale {
         
         ctx.accounts.admin_config.admin = ctx.accounts.admin.key();
         
-        //create_pda_account(ctx)?;
         
         Ok(())
     }
@@ -64,6 +63,49 @@ pub mod token_sale {
 
     }
 
+    pub fn withdraw(ctx:Context<WithdrawFunds>,amount:u64) -> Result<()> {
+        let balance = ctx.accounts.treasury.lamports();
+        require!(balance >= amount, Errors::InsufficientFunds);
+        require!(ctx.accounts.admin.key() == ctx.accounts.admin_config.admin,Errors::UnauthorizedAccess);
+        
+        let bump = ctx.bumps.treasury;
+        let seeds :&[&[ &[u8]]] = &[
+            &[b"treasury".as_ref(),
+            &[bump]]
+        ];
+        // let cpi_ctx = CpiContext::new_with_signer(
+        //     ctx.accounts.system_program.to_account_info(),
+        //     Transfer{
+        //         from:ctx.accounts.treasury.to_account_info(),
+        //         to:ctx.accounts.admin.to_account_info(),
+        //     },
+        //     seeds,
+        // );
+
+        // transfer(cpi_ctx, amount)?;
+
+        // 直接从treasury转移lamports到admin，而不是使用系统程序的CPI调用
+        **ctx.accounts.treasury.to_account_info().try_borrow_mut_lamports()? -= amount;
+        **ctx.accounts.admin.to_account_info().try_borrow_mut_lamports()? += amount;
+        
+        msg!("Withdrew {} lamports from treasury to admin", amount);
+        Ok(() )
+    }
+
+}
+
+#[derive(Accounts)]
+pub struct WithdrawFunds<'info>{
+    #[account(mut)]
+    pub admin :Signer<'info>,
+    /// CHECK:
+    pub admin_config : Account<'info, AdminConfig>,
+   
+    #[account(mut , seeds=[b"treasury"],bump)]
+    /// CHECK: treausry is pda account
+    pub treasury : AccountInfo<'info>,
+    system_program:Program<'info, System>,
+
 }
 
 
@@ -92,11 +134,12 @@ pub struct Initialize <'info>{
     )]
     pub mint:Account<'info,Mint>,
     
-    /// CHECK:  这里和rareskill的不同，需要initialize treasury account
+    /// CHECK:  这里和rareskill的不同，需要initialize treasury account,保证owner为本程序，避免账户被其他用后窃取sol
     #[account(
         init,
         payer= admin,
         space = 0,
+        //mut,
         seeds=[b"treasury"],
         bump,
     )]

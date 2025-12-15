@@ -4,6 +4,7 @@ import { TokenSale } from "../target/types/token_sale";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey,SystemProgram } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID,ASSOCIATED_TOKEN_PROGRAM_ID ,createAssociatedTokenAccount,getAccount,getMint} from "@solana/spl-token";
 import {airdropSol, confirmAndPrintTxDetails, printAccount} from './util'
+import { expect } from "chai";
 
 describe("token_sale", () => {
   // Configure the client to use the local cluster.
@@ -36,7 +37,7 @@ describe("token_sale", () => {
   console.log("treasuryPda",treasuryPda.toBase58());
 
   const TOKENS_PER_BUY = 100;
-  const initialize = async () => {
+  it("initialize", async () => {
     await airdropSol(conn, adminKp.publicKey, 10 * LAMPORTS_PER_SOL);
     ///await airdropSol(conn, treasury, 1);
     // Add your test here.
@@ -58,12 +59,11 @@ describe("token_sale", () => {
     console.log(`treasuryAccountInfo of ${treasuryPda.toBase58()}:`,treasuryAccountInfo);
 
     console.log("init transaction signature", tx);
-  };
+  });
 
   
 
-  const buyToken = async()=>{
-    try{
+  it("buyToken ", async()=>{
         console.log("1.buy token begin:")
         await airdropSol(conn,buyer.publicKey,10*LAMPORTS_PER_SOL );
         await printAccount(conn,buyer.publicKey,"2.after airdrop buyer");
@@ -105,7 +105,8 @@ describe("token_sale", () => {
         console.log("7.1 before mint token amount ",buyerAtaAccount.amount);
         
         let treasuryBalance = (await conn.getBalance(treasuryPda));
-        console.log("8.1 before transfer treasury balance", treasuryBalance);
+        console.log("7.2 before transfer treasury balance", treasuryBalance);
+        await printAccount(conn,treasuryPda,"7.3 before transfer treasury meta");
         const tx = await program.methods.mint(solToSend).accounts({
           buyer: buyer.publicKey,
           buyerAta: buyerAta,
@@ -124,22 +125,31 @@ describe("token_sale", () => {
         
         treasuryBalance = (await conn.getBalance(treasuryPda));
         console.log("8.2 after transfer treasury balance", treasuryBalance);
+        printAccount(conn,treasuryPda,"8.3.after transfer treasury meta ");
 
-      }catch(error){
-
-        console.log(error);
-        throw error;
-      }
-  };
+  });
 
 
-  it("init mint and treasury" , async function () { 
-    await initialize();
-   
 
-  })
 
- it("mint" , async function () { 
-    await buyToken();
+ it("withdraw" , async function () { 
+     printAccount(conn,treasuryPda,"before withdraw, treasury meta:");
+     const prevBalance = await conn.getBalance(treasuryPda);
+     const prevAdminBalance = await conn.getBalance(adminKp.publicKey);
+     const withdrawAmount = LAMPORTS_PER_SOL;
+     const tx = await  program.methods.withdraw(new anchor.BN(withdrawAmount)).accounts({
+       admin: adminKp.publicKey,
+       adminConfig : adminConfigKp.publicKey,
+       treasury: treasuryPda,
+       systemProgram: SystemProgram.programId,
+     }).signers([adminKp]).rpc();
+
+     await confirmAndPrintTxDetails(conn,tx);
+     const afterBalance = await conn.getBalance(treasuryPda);
+     expect(prevBalance).to.equal(afterBalance+withdrawAmount);
+     const afterAdminBalance = await conn.getBalance(adminKp.publicKey);
+     expect(prevAdminBalance).to.equal(afterAdminBalance-withdrawAmount);
+     console.log("admin balance change ",prevAdminBalance, "change to ", afterAdminBalance);
+     printAccount(conn,treasuryPda,"after withdraw, treasury meta:");
    })
 });
