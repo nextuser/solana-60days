@@ -1,16 +1,17 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
-import { pdaByProgram } from "../target/types/pda_by_program";
+import { PdaByProgram, TokenSale } from "../target/types/pda_by_program";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey,SystemProgram } from "@solana/web3.js";
 import { TOKEN_PROGRAM_ID,ASSOCIATED_TOKEN_PROGRAM_ID ,createAssociatedTokenAccount,getAccount,getMint} from "@solana/spl-token";
 import {airdropSol, confirmAndPrintTxDetails, printAccount} from './util'
 import { expect } from "chai";
+import { TokenSaleSystem } from "../target/types/token_sale_system";
 
-describe("token_sale", () => {
+describe("token_sale_system", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
 
-  const program = anchor.workspace.tokenSale as Program<TokenSale>;
+  const program = anchor.workspace.token_sale_system as Program<TokenSaleSystem>;
   const conn = anchor.getProvider().connection;
   const provider = anchor.getProvider();
   const adminKp = Keypair.generate();

@@ -1,14 +1,14 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program::{Transfer, transfer,CreateAccount,create_account};
 use anchor_spl::token::{Mint, Token, TokenAccount,mint_to,MintTo};
-declare_id!("7UduVVa9aMtcdg2dFzkY1TeGGwyJQTN22AUBqVzyYveZ");
+declare_id!("G4Nnuaghe7nSNtzZgMd8LSVhKHt8wx66YdbfT81UcqRX");
 
 ///rareskills. day36  create treasury account owner by system program
 const TOKEN_PER_SOL : u64 = 100;
 const SUPPLY_LIMIT : u64 = 1000 * 1000_000_000    ;
 
 #[program]
-pub mod pda_by_program {
+pub mod token_sale_system {
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
@@ -68,20 +68,20 @@ pub mod pda_by_program {
             &[b"treasury".as_ref(),
             &[bump]]
         ];
-        // let cpi_ctx = CpiContext::new_with_signer(
-        //     ctx.accounts.system_program.to_account_info(),
-        //     Transfer{
-        //         from:ctx.accounts.treasury.to_account_info(),
-        //         to:ctx.accounts.admin.to_account_info(),
-        //     },
-        //     seeds,
-        // );
+        let cpi_ctx = CpiContext::new_with_signer(
+            ctx.accounts.system_program.to_account_info(),
+            Transfer{
+                from:ctx.accounts.treasury.to_account_info(),
+                to:ctx.accounts.admin.to_account_info(),
+            },
+            seeds,
+        );
 
-        // transfer(cpi_ctx, amount)?;
+        transfer(cpi_ctx, amount)?;
 
         // 直接从treasury转移lamports到admin，而不是使用系统程序的CPI调用
-        **ctx.accounts.treasury.to_account_info().try_borrow_mut_lamports()? -= amount;
-        **ctx.accounts.admin.to_account_info().try_borrow_mut_lamports()? += amount;
+        // **ctx.accounts.treasury.to_account_info().try_borrow_mut_lamports()? -= amount;
+        // **ctx.accounts.admin.to_account_info().try_borrow_mut_lamports()? += amount;
         
         msg!("Withdrew {} lamports from treasury to admin", amount);
         Ok(() )
@@ -131,6 +131,9 @@ pub struct Initialize <'info>{
     
     /// CHECK:  这里和rareskill的不同，需要initialize treasury account,保证owner为本程序，避免账户被其他用后窃取sol
     #[account(
+        // init,
+        // space = 0,
+        // payer= admin,
         mut,
         seeds=[b"treasury"],
         bump,
