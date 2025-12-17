@@ -3,6 +3,7 @@ import { Program } from "@coral-xyz/anchor";
 import { BasicBank } from "../target/types/basic_bank";
 import { Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { airdropSol,confirmAndPrintTxDetails, printAccount } from "./util";
+import { expect } from "chai";
 describe("basic_bank", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
@@ -72,5 +73,36 @@ describe("basic_bank", () => {
     await confirmAndPrintTxDetails(conn,tx);
     await printAccount(conn,user.publicKey,"after withdraw user:");
     await printAccount(conn,bankAccount.publicKey,"after withdraw bankAccount:");
+  })
+
+  it("Withdraw insufficient",async ()=>{
+      try{
+      await printAccount(conn,user.publicKey,"before withdraw user:");
+      await printAccount(conn,bankAccount.publicKey,"before withdraw bankAccount:");
+      const tx = await program.methods.withdraw(new anchor.BN(1)).accounts({
+        user: user.publicKey,
+        userAccount: userAccount,
+        bank: bankAccount.publicKey,
+      }).signers([user]).rpc();
+      throw new Error("should not reach here")
+    }catch(e){
+      expect(e.message).to.include("Insufficient Balance");
+      console.log(e)
+    }
+  })
+
+    it("Withdraw invaliduser",async ()=>{
+      try{
+        const invalidUser = Keypair.generate();
+      const tx = await program.methods.withdraw(new anchor.BN(1)).accounts({
+        user: invalidUser.publicKey,
+        userAccount: userAccount,
+        bank: bankAccount.publicKey,
+      }).signers([invalidUser]).rpc();
+      throw new Error("should not reach here")
+    }catch(e){
+      expect(e.message).to.include("Invalid Authority");
+      console.log(e)
+    }
   })
 });

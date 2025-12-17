@@ -75,10 +75,14 @@ pub mod basic_bank {
         ** bank_account.to_account_info().try_borrow_mut_lamports()? = new_deposit;
 
         let user_account_info = ctx.accounts.user.to_account_info();
+        //let amount = amount.checked_sub(1).ok_or(BankError::Overflow)?;
         let new_user_balance =  user_account_info.lamports().checked_add(amount).ok_or(BankError::Overflow)?;
         ** user_account_info.try_borrow_mut_lamports()? = new_user_balance;
 
-        msg!("withdraw success:  user_account: {:?} withdraw lamports: {:?}, new balance : {:?} , bank total deposit: {:?}",
+        ctx.accounts.user_account.balance = ctx.accounts.user_account.balance.checked_sub(amount).ok_or(BankError::Overflow)?;
+        ctx.accounts.bank.total_deposit = ctx.accounts.bank.total_deposit.checked_sub(amount).ok_or(BankError::Overflow)?;
+
+        msg!("withdraw success:  user_account: {:?} withdraw lamports: {:?}, new balance : {:?} , bank total deposit: {:?}  ",
                 ctx.accounts.user_account.key(),
                 amount,
                 ctx.accounts.user_account.balance,
