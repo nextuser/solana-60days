@@ -94,9 +94,10 @@ pub mod dutch_auction {
 pub struct Buy <'info>{ 
     #[account(mut,has_one = seller)]
     pub auction     : Account<'info, Auction>,
-    #[account(mut  )]
-    pub seller : Signer<'info>,
-
+    /// CHECK: seller is the owner of the auction
+    #[account(mut )]
+    pub seller : AccountInfo<'info>,
+    #[account(mut)]
     pub buyer: Signer<'info>,
     #[account(
         mut,

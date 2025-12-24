@@ -19,7 +19,7 @@ import {
 
 } from "@solana/spl-token";
 
-
+type BN = anchor.BN;
 import {
   Keypair,
   LAMPORTS_PER_SOL,
@@ -28,6 +28,7 @@ import {
   Transaction,
 } from "@solana/web3.js";
 import { use } from "chai";
+import { Clock } from "litesvm";
 
 
 type LiteSVM = ReturnType<typeof fromWorkspace> 
@@ -63,7 +64,7 @@ describe("dutch-auction", () => {
   let sellerAta: PublicKey;
   let buyerAta: PublicKey;
   let vaultAuth: PublicKey;
-
+  let vaultAta : PublicKey;
 
   before(async() => {
 
@@ -138,7 +139,7 @@ describe("dutch-auction", () => {
       program.programId
     );
 
-    const vaultAta = await getAssociatedTokenAddress(
+    vaultAta = await getAssociatedTokenAddress(
       mintKp.publicKey,
       vaultAuth,
       true  //allowOwnerOffCurve
@@ -172,7 +173,32 @@ describe("dutch-auction", () => {
 
   });
 
-  it("Is initialized!", async () => {
-
-   });
+  it("execute buy at 25% time with expected price ", async () => {
+      const auction = await program.account.auction.fetch(auctionKeypair.publicKey);  
+      const startTime = auction.startingTime.toNumber();
+      const duration = auction.duration.toNumber();
+      const quarterTime = startTime + duration / 4;
+      const c = svm.getClock();
+      svm.setClock(new Clock(c.slot,
+        c.epochStartTimestamp,
+        c.epoch,
+        c.leaderScheduleEpoch,
+        BigInt(quarterTime)))
+      const balanceBefore = svm.getBalance(buyer.publicKey);
+      console.log("buyer balance before: ", Number(balanceBefore)/LAMPORTS_PER_SOL);
+      console.log("auction",auctionKeypair.publicKey.toBase58(), 
+                  "\nbuyer",buyer.publicKey.toBase58(), 
+                  "\nseller",seller.publicKey.toBase58(),
+                  "\nbuyer ata",buyerAta.toBase58(),
+                  "\nvault auth",vaultAuth.toBase58());
+    const tx = await program.methods.buy().accounts({
+        buyer: buyer.publicKey,
+        seller: seller.publicKey,
+        auction: auctionKeypair.publicKey,
+        buyerAta: buyerAta,
+        vaultAuth: vaultAuth,
+        vaultAta: vaultAta,
+        tokenProgram: TOKEN_PROGRAM_ID,
+      }).signers([buyer]).rpc();
+    });
 });
