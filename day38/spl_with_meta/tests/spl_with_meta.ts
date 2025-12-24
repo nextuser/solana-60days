@@ -27,11 +27,12 @@ describe("spl_with_meta", () => {
     "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
   );  
 
+  // metaplex 上傳需要付費，因此需要鏈接devenet，payer 可以通過空投獲得sol  [faucet](https://faucet.solana.com/)
   const metaplex = Metaplex.make(conn)
   .use(keypairIdentity(payer))
   .use(irysStorage({
       address: "https://devnet.irys.xyz",
-      providerUrl: anchor.getProvider().connection.rpcEndpoint,
+      providerUrl: anchor.getProvider().connection.rpcEndpoint,// 鏈接devenet
       timeout: 60_000,
   }));
 
@@ -78,13 +79,15 @@ describe("spl_with_meta", () => {
 
     const metaAuthority = mintAuthority
     console.log("8. before createTokenMetadata");
+    const fee_rate = 100;
+    const mutable  = true;
     // Add your test here.
     const tx = await program.methods.createTokenMetadata(
       metadata.name,
       metadata.symbol,
       metadataUri,
-      100, //fee rate 1%
-      true,
+      fee_rate, //fee rate 1%
+      mutable,
     ).accounts({
       metadata: metadataPDA,
       mint: mint,
