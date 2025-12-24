@@ -6,6 +6,28 @@ type Connection = anchor.web3.Connection;
 type PublicKey = anchor.web3.PublicKey;
 type Keypair = anchor.web3.Keypair;
 
+async function getVersionedTransaction(
+  conn : anchor.web3.Connection,
+  payer: Keypair,
+  instructions : anchor.web3.TransactionInstruction[],
+  signers : Keypair[] = [],
+) : Promise<anchor.web3.VersionedTransaction>{
+    const blockhash = (await conn.getLatestBlockhash("confirmed")).blockhash;
+    
+    // 4. 创建消息对象
+    const message = new anchor.web3.TransactionMessage({
+      payerKey: payer.publicKey,
+      recentBlockhash: blockhash,
+      instructions: instructions,
+    }).compileToV0Message();
+    
+    // 5. 创建VersionedTransaction
+    const versionedTx = new anchor.web3.VersionedTransaction(message);
+    signers.push(payer);
+    versionedTx.sign(signers);
+    return versionedTx;
+}
+
 /**
  * 交易分析返回值类型
  */
