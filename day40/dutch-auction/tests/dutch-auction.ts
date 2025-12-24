@@ -20,8 +20,6 @@ import {
 } from "@solana/spl-token";
 
 
-
-
 import {
   Keypair,
   LAMPORTS_PER_SOL,
@@ -29,11 +27,22 @@ import {
   SystemProgram,
   Transaction,
 } from "@solana/web3.js";
-
 import { use } from "chai";
-import { LiteSVM } from "litesvm";
 
-const useSvm = false;
+
+type LiteSVM = ReturnType<typeof fromWorkspace> 
+
+function sendTransaction(svm : LiteSVM, instructions : anchor.web3.TransactionInstruction[], signers:Keypair[]){
+  let tx = new Transaction();
+  for(let ix of instructions){
+    tx = tx.add(ix);
+  };
+  tx.recentBlockhash = svm.latestBlockhash();
+  tx.feePayer = signers[0].publicKey;
+  tx.sign(...signers);
+  return svm.sendTransaction(tx);
+
+}
 
 
 async function getVersionedTransaction(
@@ -61,19 +70,22 @@ async function getVersionedTransaction(
 describe("dutch-auction", () => {
 
   let svm = fromWorkspace("./").withDefaultPrograms().withBuiltins().withSysvars().withBlockhashCheck(true);
-  const program = anchor.workspace.dutchAuction as Program<DutchAuction>;
+  
 
-  if(useSvm){    
+  // if(useSvm){    
     const provider = new LiteSVMProvider(svm);
     anchor.setProvider(provider);
-  } else {
+  // } else {
     
-    anchor.setProvider(anchor.AnchorProvider.env());
-  }
+  //   anchor.setProvider(anchor.AnchorProvider.env());
+  // }
+  /// 注意这个program初始化需要在anchor.setProvider 之后执行   
+  const program = anchor.workspace.dutchAuction as Program<DutchAuction>;
 
-  let conn:any = anchor.getProvider().connection; 
-  conn = conn ? conn : svm;
-  console.log("connection:",conn);
+  //let conn:any = anchor.getProvider().connection; 
+  //conn = conn ? conn : svm;
+
+  
 
     // Configure the client to use the local cluster.
   /// anchor.setProvider(anchor.AnchorProvider.env());
@@ -89,14 +101,14 @@ describe("dutch-auction", () => {
 
   before(async() => {
     // Airdrop some SOL to the provider wallet    
-    if(useSvm){
+    //if(useSvm){
 
       svm.airdrop(seller.publicKey, 10_000_000_000n);
       svm.airdrop(buyer.publicKey, 10_000_000_000n);
-    }else{
-      await airdropSol(conn,seller.publicKey, 10_000_000_000);
-      await airdropSol(conn,buyer.publicKey, 10_000_000_000);
-    }
+    // }else{
+    //   await airdropSol(conn,seller.publicKey, 10_000_000_000);
+    //   await airdropSol(conn,buyer.publicKey, 10_000_000_000);
+    // }
     const lamportsForMint = LAMPORTS_PER_SOL;
     const creatMintIdx = SystemProgram.createAccount({
       fromPubkey: seller.publicKey,
@@ -118,16 +130,18 @@ describe("dutch-auction", () => {
     // mintTx.sign(seller, mintKp);
     // svm.sendTransaction(mintTx);
 
-    const mintTx = await getVersionedTransaction(
-      conn,
-      seller,
-      [creatMintIdx, initMintIx]  ,[mintKp]);
-    let txMint = await conn.sendTransaction(mintTx);
-    console.log("1.mint tx",txMint);
-    await confirmAndPrintTxDetails(conn, txMint,"1.1 mint signature");
+    // const mintTx = await getVersionedTransaction(
+    //   conn,
+    //   seller,
+    //   [creatMintIdx, initMintIx]  ,[mintKp]);
+    // let txMint = await conn.sendTransaction(mintTx);
+    // console.log("1.mint tx",txMint);
+    // await confirmAndPrintTxDetails(conn, txMint,"1.1 mint signature");
 
-   await printAccount(conn, mintKp.publicKey, "1.2 mint account:");
-   const mintInfo = await  getMint(conn, mintKp.publicKey);
+    sendTransaction(svm, [creatMintIdx, initMintIx], [seller, mintKp]);
+
+   //await printAccount(conn, mintKp.publicKey, "1.2 mint account:");
+   const mintInfo = await  svm.getAccount(mintKp.publicKey);
    console.log("2. mint info",mintInfo);
 
     sellerAta = await getAssociatedTokenAddress(
@@ -147,13 +161,14 @@ describe("dutch-auction", () => {
     // sellerAtaTx.sign( seller);
     // let tx1 = svm.sendTransaction(sellerAtaTx);
     console.log("3.mint",mintKp.publicKey.toBase58());
-    let sellerAtaTx = await getVersionedTransaction(
-      conn,
-      seller,
-      [createSellerAtaIx]
-    );
-    let tx1 = await conn.sendTransaction(sellerAtaTx);
-    await confirmAndPrintTxDetails(conn, tx1,"\n4.seller ata signature");
+    // let sellerAtaTx = await getVersionedTransaction(
+    //   conn,
+    //   seller,
+    //   [createSellerAtaIx]
+    // );
+    // let tx1 = await conn.sendTransaction(sellerAtaTx);
+    // await confirmAndPrintTxDetails(conn, tx1,"\n4.seller ata signature");
+    sendTransaction(svm, [createSellerAtaIx], [seller]);
 
     // const tokenAccount = await getAccount(conn, sellerAta);
     // console.log("seller ata",tokenAccount.address.toBase58(), "amount",tokenAccount.amount.toString(),"mint" ,tokenAccount.mint.toBase58());
@@ -177,15 +192,17 @@ describe("dutch-auction", () => {
     // buyerAtaTx.feePayer = buyer.publicKey;
     // buyerAtaTx.sign( buyer);
 
-    const buyerAtaTx = await getVersionedTransaction(
-      conn,
-      buyer,
-      [createBuyerAtaIx]
-    );
-    let tx2 = await conn.sendTransaction(buyerAtaTx);
-    await confirmAndPrintTxDetails(conn, tx2,"\n5.buyer ata signature");
+    // const buyerAtaTx = await getVersionedTransaction(
+    //   conn,
+    //   buyer,
+    //   [createBuyerAtaIx]
+    // );
+    // let tx2 = await conn.sendTransaction(buyerAtaTx);
+    // await confirmAndPrintTxDetails(conn, tx2,"\n5.buyer ata signature");
 
-    await printAccount(conn, sellerAta, "seller ata");
+    // await printAccount(conn, sellerAta, "seller ata");
+
+    sendTransaction(svm, [createBuyerAtaIx], [buyer]);
     //conn.sendTransaction
     // let tx2 = svm.sendTransaction(buyerAtaTx);
     //console.log("buyer ata tx",tx2.toString());
@@ -205,19 +222,19 @@ describe("dutch-auction", () => {
     // mintToTx.sign( seller);
     // let tx3 = await conn.sendTransaction(mintToTx, [ seller]);
 
-    const mintToTx = await getVersionedTransaction(
-      conn,
-      seller,
-      [mintToIx],
-      [mint_authority]
-    );
-    //let tx3 = svm.sendTransaction(mintToTx);
-    const sig = await conn.sendTransaction(mintToTx);
-    await confirmAndPrintTxDetails(conn, sig,"mint to seller");
+    // const mintToTx = await getVersionedTransaction(
+    //   conn,
+    //   seller,
+    //   [mintToIx],
+    //   [mint_authority]
+    // );
+    // //let tx3 = svm.sendTransaction(mintToTx);
+    // const sig = await conn.sendTransaction(mintToTx);
+    // await confirmAndPrintTxDetails(conn, sig,"mint to seller");
 
-    //const tokenAccount = await getAccount(conn, sellerAta);
-    //console.log("seller ata",tokenAccount.address.toBase58(), "amount",tokenAccount.amount.toString(),"mint" ,tokenAccount.mint.toBase58());
-    await printTokenAccount(conn, sellerAta, "sellerAta after mint:");
+    // await printTokenAccount(conn, sellerAta, "sellerAta after mint:");
+    sendTransaction(svm, [mintToIx], [ seller, mint_authority]);
+
     [vaultAuth] = PublicKey.findProgramAddressSync(
       [Buffer.from("vault"), auctionKeypair.publicKey.toBuffer()],
       program.programId
@@ -229,14 +246,14 @@ describe("dutch-auction", () => {
       true  //allowOwnerOffCurve
     );
 
-    printAccount(conn, sellerAta, "sellerAta");
-
+    //printAccount(conn, sellerAta, "sellerAta");
+    console.log("sellerAta account info ",svm.getAccount(sellerAta));
 
     const startPrice = new anchor.BN(2_000_000_000);
     const floorPrice = new anchor.BN(500_000_000);
     const duration = new anchor.BN(60 * 60 ); // 1 day in seconds
 
-    const sellerAtaAccount = await conn.getAccountInfo(sellerAta);
+    const sellerAtaAccount = await svm.getAccount(sellerAta);
     console.log("Seller ATA exists:", !!sellerAtaAccount);
     if (sellerAtaAccount) {
       console.log("Seller ATA data length:", sellerAtaAccount.data.length);
@@ -255,7 +272,7 @@ describe("dutch-auction", () => {
       systemProgram: SystemProgram.programId,
     }).signers([seller, auctionKeypair]).rpc();
 
-    confirmAndPrintTxDetails(conn, tx);
+    //confirmAndPrintTxDetails(conn, tx);
 
 
   });
