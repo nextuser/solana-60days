@@ -29,7 +29,7 @@ import {
 } from "@solana/web3.js";
 import { use } from "chai";
 import { Clock } from "litesvm";
-
+import { expect } from "chai";
 
 type LiteSVM = ReturnType<typeof fromWorkspace> 
 
@@ -65,6 +65,12 @@ describe("dutch-auction", () => {
   let buyerAta: PublicKey;
   let vaultAuth: PublicKey;
   let vaultAta : PublicKey;
+
+
+  const startPrice = new anchor.BN(2_000_000_000);
+  const floorPrice = new anchor.BN(500_000_000);
+  const duration = new anchor.BN(60 * 60 ); // 1 day in seconds
+
 
   before(async() => {
 
@@ -148,9 +154,6 @@ describe("dutch-auction", () => {
     //printAccount(conn, sellerAta, "sellerAta");
     console.log("sellerAta account info ",svm.getAccount(sellerAta));
 
-    const startPrice = new anchor.BN(2_000_000_000);
-    const floorPrice = new anchor.BN(500_000_000);
-    const duration = new anchor.BN(60 * 60 ); // 1 day in seconds
 
     const sellerAtaAccount = await svm.getAccount(sellerAta);
     console.log("Seller ATA exists:", !!sellerAtaAccount);
@@ -184,21 +187,30 @@ describe("dutch-auction", () => {
         c.epoch,
         c.leaderScheduleEpoch,
         BigInt(quarterTime)))
-      const balanceBefore = svm.getBalance(buyer.publicKey);
+      const balanceBefore = svm.getBalance(buyer.publicKey) || 0n;
       console.log("buyer balance before: ", Number(balanceBefore)/LAMPORTS_PER_SOL);
       console.log("auction",auctionKeypair.publicKey.toBase58(), 
                   "\nbuyer",buyer.publicKey.toBase58(), 
                   "\nseller",seller.publicKey.toBase58(),
                   "\nbuyer ata",buyerAta.toBase58(),
                   "\nvault auth",vaultAuth.toBase58());
-    const tx = await program.methods.buy().accounts({
-        buyer: buyer.publicKey,
-        seller: seller.publicKey,
-        auction: auctionKeypair.publicKey,
-        buyerAta: buyerAta,
-        vaultAuth: vaultAuth,
-        vaultAta: vaultAta,
-        tokenProgram: TOKEN_PROGRAM_ID,
-      }).signers([buyer]).rpc();
+      const tx = await program.methods.buy().accounts({
+          buyer: buyer.publicKey,
+          seller: seller.publicKey,
+          auction: auctionKeypair.publicKey,
+          buyerAta: buyerAta,
+          vaultAuth: vaultAuth,
+          vaultAta: vaultAta,
+          tokenProgram: TOKEN_PROGRAM_ID,
+        }).signers([buyer]).rpc();
+      
+      const balanceAfter = svm.getBalance(buyer.publicKey) || 0n;
+      console.log("buyer balance after: ", Number(balanceAfter )/LAMPORTS_PER_SOL);
+      const pricePaid = Number(balanceBefore) - Number(balanceAfter );
+      console.log("pricePaid:",pricePaid);
+      const expectedPaid = Number(startPrice) - (Number(startPrice) - Number(floorPrice)) * 0.25;
+      console.log("expectedPaid:",expectedPaid);
+      expect(pricePaid).to.equals(expectedPaid);
+
     });
 });
