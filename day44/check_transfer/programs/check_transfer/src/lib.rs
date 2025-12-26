@@ -10,17 +10,19 @@ declare_id!("BJbmrpLQZu2MqDjdVzmT5Hw9Bi1iFU8BtdVxg5b379Be");
 
 #[program]
 pub mod check_transfer {
-    use std::io::Cursor;
-
     use super::*;
 
     pub fn verify_transfer(ctx: Context<VerifyTransfer>,expected_lamports:u64) -> Result<()> {
+    
         // step 1
         let  current_ix_indx = instructions::load_current_index_checked(&ctx.accounts.instruction_sysvar)?;
-        let prevIndex = current_ix_indx.checked_sub(1).unwrap() as usize;
+        if current_ix_indx == 0 {
+            return Err(error!(ErrorCodes::MissingInstruction));
+        }
+        let prev_index = current_ix_indx.checked_sub(1).unwrap() as usize;
 
         let transfer_ix = load_instruction_at_checked(
-                                       prevIndex,
+                                       prev_index,
                                         &ctx.accounts.instruction_sysvar)
                                         .map_err(|_| error!(ErrorCodes::MissingInstruction))?;
         // step 2
