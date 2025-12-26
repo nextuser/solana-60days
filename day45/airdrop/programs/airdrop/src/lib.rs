@@ -11,11 +11,8 @@ use anchor_lang::solana_program::{
     pubkey::Pubkey,
     sysvar::instructions as sysvar_instructions,
 };
-// Ed25519 program ID is a well-known constant in Solana
-const ED25519_PROGRAM_ID: Pubkey = Pubkey::new_from_array([
-    140, 235, 140, 136, 25, 54, 219, 213, 169, 146, 226, 24, 115, 186, 223, 99,
-    186, 115, 172, 119, 151, 104, 104, 105, 103, 22, 25, 141, 225, 135, 155, 254
-]);
+const ED25519_PROGRAM_ID : Pubkey= pubkey::pubkey!("Ed25519SigVerify111111111111111111111111111");
+
 
 declare_id!("D7Hzu8LJLUQzCaqPbnQdhKtsSa481Qo5QBTnaK3SjELK");
 
@@ -47,15 +44,20 @@ pub mod airdrop {
         require!(ed25519_instruction.data.len() > HEADER_LEN,AirdropError::BadEd25519HEADER_LENGTH);
         let sig_count = ed25519_instruction.data[0] as usize;
         require!(sig_count > 0,AirdropError::BadEd25519HEADER_LENGTH);
-        let data = &ed25519_instruction.data[SHIFT..];
-        let signature_offset = read_u16(data, 0)? as usize;
-        let signature_instruction_index = read_u16(data, 1)? as usize;
-        let publickey_offset = read_u16(data, 2)? as usize;
-        let publickey_instruction_index = read_u16(data, 3)? as usize;
-        let message_offset = read_u16(data, 4)? as usize;
-        let message_length = read_u16(data, 5)? as usize;
-        let message_instruction_index = read_u16(data, 6)? as usize;
+        let shift_data = &ed25519_instruction.data[SHIFT..];
+        
+        let signature_offset = read_u16(shift_data, 0)? as usize;
+        let signature_instruction_index = read_u16(shift_data, 1)? as usize;
+        let publickey_offset = read_u16(shift_data, 2)? as usize;
+        let publickey_instruction_index = read_u16(shift_data, 3)? as usize;
+        let message_offset = read_u16(shift_data, 4)? as usize;
+        let message_length = read_u16(shift_data, 5)? as usize;
+        let message_instruction_index = read_u16(shift_data, 6)? as usize;
         let data_len = ed25519_instruction.data.len();
+
+        let data = & ed25519_instruction.data[..];
+
+        
 
         require!(signature_instruction_index == THIS_INDEX, AirdropError::InvalidInstructionSysvar);
         require!(publickey_instruction_index == THIS_INDEX, AirdropError::InvalidInstructionSysvar);
@@ -70,24 +72,35 @@ pub mod airdrop {
         let pk_slice = &data[publickey_offset..publickey_offset+PUBKEY_LEN];
         let mut pk_arr = [0u8;32];
         pk_arr.copy_from_slice(pk_slice);
-        let distributor_pk = Pubkey::new_from_array(pk_arr);
-        if distributor_pk != ctx.accounts.expected_distributor.key(){
-            return Err(error!(AirdropError::DistributorMismatch));
-        }
+
+
+        let mut amount_bytes = [0u8;8];
+
 
         require!(message_length == MSG_LEN , AirdropError::InvalidInstructionSysvar);
         let msg =  &data[message_offset..message_offset + message_length];
+        amount_bytes.copy_from_slice(&msg[32..40]);
+        // airdrop token to  recipient
+        let amount = u64::from_le_bytes(amount_bytes);        
+        let distributor_pk = Pubkey::new_from_array(pk_arr);
+
+        msg!("message amount {}, publickey {}", amount, distributor_pk.to_string());
+        if distributor_pk != ctx.accounts.expected_distributor.key(){
+            msg!("distributor mismatch, {}, expected={}",
+                distributor_pk, ctx.accounts.expected_distributor.key());
+                //return Ok(());
+            return Err(error!(AirdropError::DistributorMismatch));
+        }
+
         let mut rec_arr = [0u8;32];
         rec_arr.copy_from_slice(&msg[0..32]);
         let recipient_pk = Pubkey::new_from_array(rec_arr);
         if recipient_pk != ctx.accounts.recipient.key() {
             return Err(error!(AirdropError::RecipientMismatch));
         }
-        let mut amount_bytes = [0u8;8];
-        amount_bytes.copy_from_slice(&msg[32..40]);
 
-        // airdrop token to  recipient
-        let amount = u64::from_le_bytes(amount_bytes);
+
+        
         do_airdrop(&distributor_pk, &recipient_pk, amount);
         Ok(())
     }
