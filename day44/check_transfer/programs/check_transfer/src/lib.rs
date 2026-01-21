@@ -6,7 +6,7 @@ use anchor_lang::solana_program::{
     system_instruction::SystemInstruction,
 };
 use bincode;
-declare_id!("BJbmrpLQZu2MqDjdVzmT5Hw9Bi1iFU8BtdVxg5b379Be");
+declare_id!("BfMZxxQHxMzxim3qM7QcS2Gt7Khek8TsrN5ZwHviBiYF");
 
 #[program]
 pub mod check_transfer {

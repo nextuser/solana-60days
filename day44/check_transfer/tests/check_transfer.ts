@@ -34,7 +34,7 @@ describe("check_transfer", () => {
 
 
 
-    it("check transfer fail !", async () => {
+  it("check transfer fail !", async () => {
       try{
         // Add your test here.
         const amount = new anchor.BN(1_000_000_000);
@@ -51,6 +51,35 @@ describe("check_transfer", () => {
       }catch(err){
         expect(err.message).to.include("MissingInstruction");
         
+        return;
+      }
+
+  });
+
+
+  it("check transfer amount mismatch !", async () => {
+      try{
+        // Add your test here.
+        const amount = new anchor.BN(1_000_000_000);
+        const tx = new Transaction();
+
+        tx.add(SystemProgram.transfer({
+          fromPubkey: payer.publicKey,
+          toPubkey: repient.publicKey,
+          lamports: amount.toNumber() - 1,
+        }))
+
+        tx.add(await program.methods.verifyTransfer(amount).accounts({
+          instructionSysvar: anchor.web3.SYSVAR_INSTRUCTIONS_PUBKEY,
+        }).instruction());
+
+        const sig = await anchor.getProvider().sendAndConfirm(tx, [payer]);
+        await confirmAndPrintTxDetails(conn, sig);
+
+        throw new Error("The instruction should have failed");
+      }catch(err){
+        console.log("Error message:", (err.message) );
+        expect(err.message).to.include("IncorrectAmount");
         return;
       }
 

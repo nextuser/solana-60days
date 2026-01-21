@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-check_transfer = "BJbmrpLQZu2MqDjdVzmT5Hw9Bi1iFU8BtdVxg5b379Be"
+check_transfer = "BfMZxxQHxMzxim3qM7QcS2Gt7Khek8TsrN5ZwHviBiYF"
 
 [registry]
 url = "https://api.apr.dev"
