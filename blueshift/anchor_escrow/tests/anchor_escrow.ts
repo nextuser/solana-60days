@@ -2,7 +2,12 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { AnchorEscrow } from "../target/types/anchor_escrow";
 import { ConfirmOptions, Keypair, PublicKey } from "@solana/web3.js";
-import { Mint,getOrCreateAssociatedTokenAccount, getAssociatedTokenAddress ,createMint, ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, createAssociatedTokenAccount, mintTo} from '@solana/spl-token';
+import { Mint,getOrCreateAssociatedTokenAccount, getAssociatedTokenAddress ,
+  createMint, ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, 
+  createAssociatedTokenAccount, mintTo,
+  getAccount,
+} from '@solana/spl-token';
+import { expect } from "chai";
 async function confirmTransaction(connection: anchor.web3.Connection, signature: string){
     const Block = await connection.getLatestBlockhash();
     await  connection.confirmTransaction(
@@ -20,6 +25,11 @@ async function airdrop(connection: anchor.web3.Connection, pubkey: anchor.web3.P
     
 }
 
+async function getTokenAmount(connection: anchor.web3.Connection, ata: anchor.web3.PublicKey){
+
+  return (await getAccount(connection, ata, "confirmed")).amount;
+}
+
 describe("anchor_escrow", () => {
   // Configure the client to use the local cluster.
   anchor.setProvider(anchor.AnchorProvider.env());
@@ -34,9 +44,11 @@ describe("anchor_escrow", () => {
   let vault : anchor.web3.PublicKey;
   let makerAtaA : anchor.web3.PublicKey;
   let takerAtaB : anchor.web3.PublicKey;
+  let takerAtaA : anchor.web3.PublicKey;
+  let makerAtaB : anchor.web3.PublicKey;
   const seed = 1;
-  const amount = (1000_000);
-  const receive =(2000_000) ;
+  const amount = 1000_000n;
+  const receive = 2000_000n ;
 
   const [escrow, bump] =  anchor.web3.PublicKey.findProgramAddressSync(
       [
@@ -61,7 +73,11 @@ describe("anchor_escrow", () => {
 
     let init_balance = await connection.getBalance(maker.publicKey);
     makerAtaA = await createAssociatedTokenAccount(connection,payer,mintA.publicKey, maker.publicKey,confirm_option);
+
+    makerAtaB = await createAssociatedTokenAccount(connection,payer,mintB.publicKey, maker.publicKey,confirm_option);
     takerAtaB = await createAssociatedTokenAccount(connection,payer,mintB.publicKey, taker.publicKey,confirm_option);
+    takerAtaA = await createAssociatedTokenAccount(connection,payer,mintA.publicKey, taker.publicKey,confirm_option);
+    console.log("ata created for taker")
     console.log("ata created for maker")
     vault = await getAssociatedTokenAddress(mintA.publicKey, escrow, true, TOKEN_PROGRAM_ID);
 
@@ -73,9 +89,8 @@ describe("anchor_escrow", () => {
     // console.log("ata created for vault");
   });
   it("test make an refund!", async () => {
-
-
-    const signature = await program.methods.make(new anchor.BN(seed), new anchor.BN(receive), new anchor.BN(amount)).accounts({
+    const signature = await program.methods.make(new anchor.BN(seed), new anchor.BN(receive), new anchor.BN(amount))
+      .accounts({
       maker: maker.publicKey,
       escrow: escrow,
       mintA: mintA.publicKey,
@@ -84,12 +99,48 @@ describe("anchor_escrow", () => {
       vault: vault,
       associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
       tokenProgram: TOKEN_PROGRAM_ID,
-    })
-    .signers([maker])
-    .rpc();
+    }) .signers([maker]).rpc();
+    console.log(103);
+    expect( (await getAccount(connection,makerAtaA)).amount).to.equal(0n);
+    console.log(105);
+    expect( (await getAccount(connection,vault)).amount).to.equal(amount);
+    console.log(107);
+    expect( (await getAccount(connection,takerAtaB)).amount).to.equal(receive);
+
     await confirmTransaction(connection, signature);
-    const meta = await connection.getParsedTransaction(signature, confirm_option);
+    const meta = await connection.getParsedTransaction(signature, 'confirmed');
     console.log(meta.meta);
+
+    const signature2 = await program.methods.take().accounts({
+      taker: taker.publicKey,
+      maker: maker.publicKey,
+      escrow: escrow,
+      mintA: mintA.publicKey,
+      mintB: mintB.publicKey,
+      takerAtaB: takerAtaB,
+      takerAtaA: takerAtaA,
+      makerAtaB: makerAtaB,
+      vault: vault,
+      associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+      tokenProgram: TOKEN_PROGRAM_ID, 
+    }) .signers([taker]).rpc();
+    await confirmTransaction(connection, signature2);
+    const meta2 = await connection.getParsedTransaction(signature2, 'confirmed');
+    console.log(meta2.meta);
+    await confirmTransaction(connection, signature2);
+    console.log(128);
+    expect( (await getAccount(connection,makerAtaB)).amount).to.equal(receive);
+    console.log(1);
+    //vault distroyed
+    //expect( await getTokenAmount(connection,vault)).to.equal(0n);
+    //console.log(2);
+    expect(await getTokenAmount(connection,takerAtaB)).to.equal(0n);
+    console.log(3);
+    expect( await getTokenAmount(connection,takerAtaA)).to.equal(amount);
+    console.log(4);
+
+
+
 
     
   });

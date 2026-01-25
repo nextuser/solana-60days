@@ -13,18 +13,15 @@ pub mod anchor_escrow {
         make::handler(ctx, seed, receive, amount)
     }
 
-    // pub fn take(ctx: Context<Take>) -> Result<()> {
-    //     take::handler(ctx)
-    // }
-
-    // pub fn refund(ctx: Context<Refund>) -> Result<()> {
-    //     refund::handler(ctx)
-    // }
-
-    pub fn initialize(ctx: Context<Initialize>,amount :u64) -> Result<()>{
-       //ctx.accounts.escrow.amount = amount;
-        Ok(())
+    pub fn take(ctx: Context<Take>) -> Result<()> {
+        take::handler(ctx)
     }
+
+    pub fn refund(ctx: Context<Refund>) -> Result<()> {
+        refund::handler(ctx)
+    }
+
+
 }
 
 

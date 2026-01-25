@@ -36,7 +36,7 @@ pub struct Take<'info>{
     #[account(
         mut,
         associated_token::mint = mint_a,
-        associated_token::authority = taker,
+        associated_token::authority = escrow,
         associated_token::token_program = token_program,
     )]
     pub vault : Box<InterfaceAccount<'info, TokenAccount>>,
