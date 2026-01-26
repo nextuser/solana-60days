@@ -1,30 +1,31 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { AnchorEscrow } from "../target/types/anchor_escrow";
-import { ConfirmOptions, Keypair, PublicKey } from "@solana/web3.js";
+import { ConfirmOptions, Keypair, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 import { Mint,getOrCreateAssociatedTokenAccount, getAssociatedTokenAddress ,
   createMint, ASSOCIATED_TOKEN_PROGRAM_ID, TOKEN_PROGRAM_ID, 
   createAssociatedTokenAccount, mintTo,
   getAccount,
 } from '@solana/spl-token';
-import {dot} from './dot';
+import {dot,airdropSol,confirmAndPrintTxDetails } from 'anchor-utils';
 import { expect } from "chai";
-async function confirmTransaction(connection: anchor.web3.Connection, signature: string){
-    const Block = await connection.getLatestBlockhash();
-    await  connection.confirmTransaction(
-      {signature,
-        blockhash: Block.blockhash,
-        lastValidBlockHeight: Block.lastValidBlockHeight
-      },  
-      "confirmed"
+
+// async function confirmTransaction(connection: anchor.web3.Connection, signature: string){
+//     const Block = await connection.getLatestBlockhash();
+//     await  connection.confirmTransaction(
+//       {signature,
+//         blockhash: Block.blockhash,
+//         lastValidBlockHeight: Block.lastValidBlockHeight
+//       },  
+//       "confirmed"
       
-    );
-}
-async function airdrop(connection: anchor.web3.Connection, pubkey: anchor.web3.PublicKey){
-    let signature = await connection.requestAirdrop(pubkey, 10_000_000_000);
-    await confirmTransaction(connection, signature);
+//     );
+// }
+// async function airdrop(connection: anchor.web3.Connection, pubkey: anchor.web3.PublicKey){
+//     let signature = await connection.requestAirdrop(pubkey, 10_000_000_000);
+//     await confirmTransaction(connection, signature);
     
-}
+// }
 
 
 
@@ -98,19 +99,19 @@ describe("anchor_escrow", () => {
      await createMint(connection, payer, payer.publicKey, payer.publicKey, 6,mintA,confirm_option,TOKEN_PROGRAM_ID);
      await createMint(connection, payer, payer.publicKey, payer.publicKey, 6,mintB,confirm_option,TOKEN_PROGRAM_ID);
     console.log("mint created");
-    await airdrop(connection, maker.publicKey);
-    await airdrop(connection, taker.publicKey);
-    await airdrop(connection, payer.publicKey);
+    await airdropSol( maker.publicKey,1);
+    await airdropSol( taker.publicKey,1);
+    await airdropSol( payer.publicKey,1);
 
     console.log("air drop ok");
 
 
     let init_balance = await connection.getBalance(maker.publicKey);
     makerAtaA = await createAssociatedTokenAccount(connection,payer,mintA.publicKey, maker.publicKey,confirm_option);
-
     makerAtaB = await createAssociatedTokenAccount(connection,payer,mintB.publicKey, maker.publicKey,confirm_option);
-    takerAtaB = await createAssociatedTokenAccount(connection,payer,mintB.publicKey, taker.publicKey,confirm_option);
+    
     takerAtaA = await createAssociatedTokenAccount(connection,payer,mintA.publicKey, taker.publicKey,confirm_option);
+    takerAtaB = await createAssociatedTokenAccount(connection,payer,mintB.publicKey, taker.publicKey,confirm_option);
     console.log("ata created for taker")
     console.log("ata created for maker")
 
@@ -147,9 +148,7 @@ describe("anchor_escrow", () => {
     dot();
     expect( (await getAccount(connection,takerAtaB)).amount).to.equal(receive);
 
-    await confirmTransaction(connection, signature);
-    const meta = await connection.getParsedTransaction(signature, 'confirmed');
-    console.log("----------------make transaction meta:",meta.meta);
+    await confirmAndPrintTxDetails( signature,"make1");
 
     const signature2 = await program.methods.take().accounts({
       taker: taker.publicKey,
@@ -164,10 +163,8 @@ describe("anchor_escrow", () => {
       associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
       tokenProgram: TOKEN_PROGRAM_ID, 
     }) .signers([taker]).rpc();
-    await confirmTransaction(connection, signature2);
-    const meta2 = await connection.getParsedTransaction(signature2, 'confirmed');
-    console.log("----------------take transaction meta:",meta2.meta);
-    await confirmTransaction(connection, signature2);
+    await confirmAndPrintTxDetails( signature2,"take1");
+
     dot();
     expect( (await getAccount(connection,makerAtaB)).amount).to.equal(receive);
     dot();
@@ -201,9 +198,7 @@ describe("anchor_escrow", () => {
       tokenProgram: TOKEN_PROGRAM_ID,
     }) .signers([maker]).rpc();
 
-    await confirmTransaction(connection, signature);
-    const meta = await connection.getParsedTransaction(signature, 'confirmed');
-    console.log("----------------make transaction meta:",meta.meta);
+    await confirmAndPrintTxDetails( signature, "make2");
 
     dot();
     expect( (await getAccount(connection,makerAtaA)).amount).to.equal(0n);
@@ -221,9 +216,8 @@ describe("anchor_escrow", () => {
       associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
       tokenProgram: TOKEN_PROGRAM_ID, 
     }) .signers([maker]).rpc();
-    await confirmTransaction(connection, signature2);
-    const meta2 = await connection.getParsedTransaction(signature2, 'confirmed');
-    console.log("----------------refund transaction meta:",meta2.meta);
+    await confirmAndPrintTxDetails( signature2,"refund2");
+
     dot();
     //vault distroyed
     //expect( await getTokenAmount(connection,vault)).to.equal(0n);
