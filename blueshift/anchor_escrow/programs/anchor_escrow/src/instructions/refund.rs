@@ -88,7 +88,7 @@ impl<'info> Refund<'info> {
             authority: self.escrow.to_account_info(),
         };
         close_account(CpiContext::new_with_signer( 
-                    self.associated_token_program.to_account_info(), 
+                    self.token_program.to_account_info(), 
                             close_accounts, 
                             signer_seeds))
     }
