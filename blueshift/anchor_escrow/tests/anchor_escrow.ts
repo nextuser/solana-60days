@@ -7,6 +7,7 @@ import { Mint,getOrCreateAssociatedTokenAccount, getAssociatedTokenAddress ,
   createAssociatedTokenAccount, mintTo,
   getAccount,
 } from '@solana/spl-token';
+import {dot} from './dot';
 import { expect } from "chai";
 async function confirmTransaction(connection: anchor.web3.Connection, signature: string){
     const Block = await connection.getLatestBlockhash();
@@ -24,6 +25,8 @@ async function airdrop(connection: anchor.web3.Connection, pubkey: anchor.web3.P
     await confirmTransaction(connection, signature);
     
 }
+
+
 
 async function getTokenAmount(connection: anchor.web3.Connection, ata: anchor.web3.PublicKey){
 
@@ -137,11 +140,11 @@ describe("anchor_escrow", () => {
       associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
       tokenProgram: TOKEN_PROGRAM_ID,
     }) .signers([maker]).rpc();
-    console.log(103);
+    dot();
     expect( (await getAccount(connection,makerAtaA)).amount).to.equal(0n);
-    console.log(105);
+    dot();
     expect( (await getAccount(connection,escrowInfo.vault)).amount).to.equal(amount);
-    console.log(107);
+    dot();
     expect( (await getAccount(connection,takerAtaB)).amount).to.equal(receive);
 
     await confirmTransaction(connection, signature);
@@ -165,16 +168,16 @@ describe("anchor_escrow", () => {
     const meta2 = await connection.getParsedTransaction(signature2, 'confirmed');
     console.log("----------------take transaction meta:",meta2.meta);
     await confirmTransaction(connection, signature2);
-    console.log(128);
+    dot();
     expect( (await getAccount(connection,makerAtaB)).amount).to.equal(receive);
-    console.log(1);
+    dot();
     //vault distroyed
     //expect( await getTokenAmount(connection,vault)).to.equal(0n);
     //console.log(2);
     expect(await getTokenAmount(connection,takerAtaB)).to.equal(0n);
-    console.log(3);
+    dot();
     expect( await getTokenAmount(connection,takerAtaA)).to.equal(amount);
-    console.log(4);
+    dot();
     expect( await getTokenAmount(connection,makerAtaA)).to.equal(0n);    
   });//end it
 
@@ -202,11 +205,11 @@ describe("anchor_escrow", () => {
     const meta = await connection.getParsedTransaction(signature, 'confirmed');
     console.log("----------------make transaction meta:",meta.meta);
 
-    console.log(206);
+    dot();
     expect( (await getAccount(connection,makerAtaA)).amount).to.equal(0n);
-    console.log(207);
+    dot();
     expect( (await getAccount(connection,escrowInfo.vault)).amount).to.equal(amount);
-     console.log(208);
+    dot();
 
 
     const signature2 = await program.methods.refund().accounts({
@@ -221,7 +224,7 @@ describe("anchor_escrow", () => {
     await confirmTransaction(connection, signature2);
     const meta2 = await connection.getParsedTransaction(signature2, 'confirmed');
     console.log("----------------refund transaction meta:",meta2.meta);
-    console.log(128);
+    dot();
     //vault distroyed
     //expect( await getTokenAmount(connection,vault)).to.equal(0n);
     //console.log(2);
