@@ -1,8 +1,9 @@
 use anchor_lang::prelude::*;
 use anchor_lang::system_program::{Transfer,transfer};
 
-declare_id!("GWDp2L8CKCMGpdaDVWpJvM3uHRapqASAMn2hSsAjMrLf");
 //declare_id!("GWDp2L8CKCMGpdaDVWpJvM3uHRapqASAMn2hSsAjMrLf");
+//declare_id!("GWDp2L8CKCMGpdaDVWpJvM3uHRapqASAMn2hSsAjMrLf");
+declare_id!("22222222222222222222222222222222222222222222");
 #[program]
 pub mod vault {
     use super::*;

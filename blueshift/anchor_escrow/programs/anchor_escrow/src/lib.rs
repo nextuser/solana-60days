@@ -4,8 +4,8 @@ mod instructions;
 mod state;
 use instructions::*;
 
-declare_id!("GHNy6w8h5wJXLgbgxbh2bqmYDGMJukfivGQw6whRGhiV");
-
+//declare_id!("GHNy6w8h5wJXLgbgxbh2bqmYDGMJukfivGQw6whRGhiV");
+declare_id!("22222222222222222222222222222222222222222222");
 #[program]
 pub mod anchor_escrow {
     use super::*;
