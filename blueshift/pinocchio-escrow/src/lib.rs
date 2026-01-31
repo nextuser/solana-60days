@@ -6,6 +6,8 @@ use pinocchio::{
 };
 
 mod instructions;
+mod errors;
+use errors::*;
 use instructions::*;
 
 const ID : Address = Address::from_str_const("22222222222222222222222222222222222222222222");

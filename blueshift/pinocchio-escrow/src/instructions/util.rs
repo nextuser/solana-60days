@@ -1,12 +1,13 @@
 
 use pinocchio::{
+    
     AccountView,
     error::ProgramError,
     ProgramResult,
     Address
 };
 use pinocchio_token::state::{TokenAccount,Mint};
-
+use crate::errors::EscrowError;
 use pinocchio_associated_token_account::{
     instructions::{Create as TokenCreate},
 };
@@ -16,6 +17,7 @@ use pinocchio_token_2022::{
     ID as TOKEN_2022_PROGRAM_ID,
     state::TokenAccount as TokenAccount2022,
 };
+//use solana_program_log::log;
 
 
 //const TOKEN_PROGRAM_ID : Address = Address::from_str_const("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
@@ -44,11 +46,11 @@ pub fn get_ata_address(
 pub fn program_check(pda : & AccountView, space : usize) -> ProgramResult
 {
     if  !pda.owned_by(&crate::ID) {
-        return Err(ProgramError::InvalidAccountOwner);
+        return Err(EscrowError::PdaOwnerMismatch.into());
     }
 
     if pda.data_len() != space{
-        return Err(ProgramError::InvalidAccountData);
+        return Err(EscrowError::PdaSpaceMismatch.into());
     }
     Ok(())
 }
@@ -58,7 +60,7 @@ pub fn mint_check(
     ) -> ProgramResult
 {
     if !mint.owned_by(token_program.address()){
-        return Err(ProgramError::InvalidAccountOwner);
+        return Err(EscrowError::MintOwnerMismatch.into());
     }
     let token_address = token_program.address();
     
@@ -66,17 +68,17 @@ pub fn mint_check(
         &TOKEN_PROGRAM_ID => {
             
             if mint.data_len() != Mint::LEN{
-                return Err(ProgramError::InvalidAccountData);
+                return Err(EscrowError::MintSpaceMismatch.into());
             }
         },
         &TOKEN_2022_PROGRAM_ID => {
             if mint.data_len() < TokenAccount2022::BASE_LEN{
-                return Err(ProgramError::InvalidAccountData);
+                return Err(EscrowError::MintSpaceMismatch.into());
             }
             
         },
         _ => {
-            return Err(ProgramError::InvalidAccountData);
+            return Err(EscrowError::InvalidTokenProgram.into());
         }
     }
     Ok(())
@@ -86,18 +88,14 @@ pub fn ata_address_check(
     ata_account : & AccountView,
     authority : & AccountView,
     token_program : & AccountView,
-    mint : & AccountView,) ->ProgramResult{
+    mint : & Address) ->ProgramResult{
 
     let token_address  = token_program.address();
 
 
-    let expected_ata = get_ata_address(authority.address(), mint.address(),&token_address);
+    let expected_ata = get_ata_address(authority.address(), mint,&token_address);
     if expected_ata.ne(&ata_account.address()){
-        return Err(ProgramError::InvalidAccountData);
-    }
-
-    if !ata_account.owned_by(token_address){
-        return Err(ProgramError::InvalidAccountOwner);
+        return Err(EscrowError::AtaPdaDeriveMismatch.into());
     }
 
     Ok(())
@@ -114,8 +112,7 @@ pub fn token_account_init_if_needed<'info>(
 {
     
     if ata_account.lamports() == 0 {
-        ata_address_check(ata_account, authority, token_program, mint)?;
-           
+        
         TokenCreate{
             funding_account : payer,
             account : ata_account,
@@ -124,8 +121,9 @@ pub fn token_account_init_if_needed<'info>(
             system_program,
             token_program,
         }.invoke()?;
+        ata_address_check(ata_account, authority, token_program, mint.address())?;
     } else{
-        ata_check(ata_account, authority, token_program, mint)?;
+        ata_check(ata_account, authority, token_program, mint.address())?;
     };
     Ok(())
 }
@@ -133,30 +131,34 @@ pub fn ata_check(
     ata_account : & AccountView,
     authority : & AccountView,
     token_program : & AccountView,
-    mint : & AccountView,
+    mint : & Address,
     ) -> ProgramResult
 {
 
 
     ata_address_check(ata_account, authority, token_program, mint)?;
 
+    if  !ata_account.owned_by(token_program.address()){
+        return Err(EscrowError::AtaOwnerMismatch.into());
+    }
+
     match token_program.address() {
         &TOKEN_PROGRAM_ID => {
             let token_account = TokenAccount::from_account_view(ata_account)?;
-            if token_account.mint().ne(mint.address()){
-                return Err(ProgramError::InvalidAccountData);
+            if token_account.mint().ne(mint){
+                return Err(EscrowError::AtaMintMismatch.into());
             }
             if token_account.owner().ne(authority.address()){
-                return Err(ProgramError::InvalidAccountData);
+                return Err(EscrowError::AtaOwnerMismatch.into());
             }
         },
         &TOKEN_2022_PROGRAM_ID => {
             let token_account = TokenAccount2022::from_account_view(ata_account)?;
-            if token_account.mint().ne(mint.address()){
-                return Err(ProgramError::InvalidAccountData);
+            if token_account.mint().ne(mint){
+                return Err(EscrowError::AtaMintMismatch.into());
             }
             if token_account.owner().ne(authority.address()){
-                return Err(ProgramError::InvalidAccountData);
+                return Err(EscrowError::AtaOwnerMismatch.into());
             }
         },
         _ => {
@@ -171,22 +173,26 @@ pub fn ata_check(
 
 pub fn  close_system_account<'info> (account : &'info AccountView, destination : &'info AccountView) -> ProgramResult
 {
-    let lamports = account.lamports();
-    let mut data = account.try_borrow_mut()?;
-    data[0] = 0xff;
-    account.resize(1)?;
 
-    if lamports == 0{
+    // log!("pre close,destination lamports {}, account lamports {} ", destination.lamports(), account.lamports());
+    //如果已经关闭，owner是不同的
+    if account.lamports() == 0{
+        // log!("close_system_account account already closed");
         return Ok( ())
     }
+    
     if !account.owned_by(&crate::ID){
         return Err(ProgramError::InvalidAccountOwner);
     }
     
+    let lamports = account.lamports().checked_add(destination.lamports()).ok_or(ProgramError::ArithmeticOverflow)?;
+    destination.set_lamports(lamports);
     account.set_lamports(0);
-    destination.set_lamports(lamports.checked_add(destination.lamports()).unwrap());
+
+    //log!("after set_lamports close,destination lamports {}, account lamports {} ", destination.lamports(), account.lamports());
+    account.close()
+
     
-    Ok(())
 
 }
 
@@ -196,31 +202,4 @@ pub fn signer_check(signer :&AccountView) -> ProgramResult{
     }
     Ok(())
 }
-
-
-// pub fn create_token_account<'info>(
-//     payer : &'info AccountView,
-//     ata_account : &'info AccountView,
-//     authority : &'info AccountView,
-//     mint : &'info AccountView,
-//     system_program : &'info AccountView,
-//     token_program : &'info AccountView,
-//     ) -> ProgramResult
-// {
-//     let expected_ata = get_ata_address(authority.address(),mint.address(),  token_program.address());
-//     if expected_ata.ne(&ata_account.address()){
-//         return Err(ProgramError::InvalidAccountData);
-//     }
-//     if ata_account.lamports() == 0 {
-//         AtaCreate{
-//             funding_account : payer,
-//             account : ata_account,
-//             wallet : authority,
-//             mint : mint,
-//             system_program,
-//             token_program,
-//         }.invoke()?;
-//     }
-//     Ok(())
-// }
 

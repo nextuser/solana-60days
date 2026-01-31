@@ -14,6 +14,11 @@ use crate::{
  *
  */
 
+ #[test]
+ fn test_space_of_discriminator(){
+    assert_eq!(Escrow::DISCRIMINATOR.len(), 1);
+ }
+
 #[derive(Accounts)]
 #[instruction(seed:u64)]
 pub struct Make<'info>{
@@ -22,7 +27,7 @@ pub struct Make<'info>{
     #[account(
         init,
         payer = maker,
-        space = Escrow::INIT_SPACE + 8,//Escrow::DISCRIMINATOR.len(),
+        space = Escrow::INIT_SPACE + Escrow::DISCRIMINATOR.len(),
         seeds = [ESCROW_SEED, maker.key().as_ref(), &seed.to_le_bytes()],
         bump
     )]
@@ -62,13 +67,13 @@ pub struct Make<'info>{
 
 
 impl<'info> Make<'info>{
-    fn populate_escrow(&mut self,seed :u64, amount :u64, bump:u8) {
+    fn populate_escrow(&mut self,seed :u64, receive :u64, bump:u8) {
         self.escrow.set_inner(Escrow{
             seed : seed,
             maker :  self.maker.key(),
             mint_a : self.mint_a.key(),
             mint_b : self.mint_b.key(),
-            receive : amount,
+            receive : receive,
             bump : bump,
         });
 
@@ -89,10 +94,10 @@ impl<'info> Make<'info>{
 }
 
 
-pub fn handler(ctx:Context<Make>,seed : u64, receive:u64, amount : u64) -> Result<()>{ 
+pub fn handler(ctx:Context<Make>,seed : u64, deposit:u64, receive : u64) -> Result<()>{ 
     require_gt!(receive,0,EscrowError::InvalidAmount);
-    require_gt!(amount , 0,EscrowError::InvalidAmount);
+    require_gt!(receive , 0,EscrowError::InvalidAmount);
     ctx.accounts.populate_escrow(seed,receive,ctx.bumps.escrow);
-    ctx.accounts.deposit_tokens(amount)?;
+    ctx.accounts.deposit_tokens(deposit)?;
     Ok(())
 }

@@ -9,18 +9,19 @@ declare_id!("22222222222222222222222222222222222222222222");
 #[program]
 pub mod anchor_escrow {
     use super::*;
-    pub fn make(ctx: Context<Make>,seed:u64,receive:u64, amount : u64) -> Result<()> {
-        make::handler(ctx, seed, receive, amount)
-    }
 
+    #[instruction(discriminator=0)]
+    pub fn make(ctx: Context<Make>,seed:u64,deposit : u64,receive:u64, ) -> Result<()> {
+        make::handler(ctx, seed, deposit,receive)
+    }
+    #[instruction(discriminator=1)]
     pub fn take(ctx: Context<Take>) -> Result<()> {
         take::handler(ctx)
     }
-
+    #[instruction(discriminator=2)]
     pub fn refund(ctx: Context<Refund>) -> Result<()> {
         refund::handler(ctx)
     }
-
 
 }
 

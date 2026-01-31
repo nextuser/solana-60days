@@ -42,6 +42,7 @@ type EscrowInfo = {
 }
 
 const program = anchor.workspace.anchorEscrow as Program<AnchorEscrow>;
+console.log("anchor program id :",program.programId.toBase58());
 async function getEscrowInfo(
     connection: anchor.web3.Connection, 
     mint_key: anchor.web3.PublicKey,
@@ -129,9 +130,9 @@ describe("anchor_escrow", () => {
     console.log("mint tokenB to taker");
     const signature = await program.methods.make(
       new anchor.BN(seed), 
-      new anchor.BN(receive), 
-      new anchor.BN(amount))
-      .accounts({
+      new anchor.BN(amount),
+      new anchor.BN(receive) 
+    ).accounts({
       maker: maker.publicKey,
       escrow: escrowInfo.escrow,
       mintA: mintA.publicKey,
@@ -186,7 +187,7 @@ describe("anchor_escrow", () => {
     const seed = 2n;
     const escrowInfo : EscrowInfo= await getEscrowInfo(connection, mintA.publicKey, maker.publicKey, seed);
     expect( (await getAccount(connection,makerAtaB)).amount).to.equal(receive);
-    const signature = await program.methods.make(new anchor.BN(seed), new anchor.BN(receive), new anchor.BN(amount))
+    const signature = await program.methods.make(new anchor.BN(seed),  new anchor.BN(amount),new anchor.BN(receive))
       .accounts({
       maker: maker.publicKey,
       escrow: escrowInfo.escrow,

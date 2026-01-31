@@ -22,9 +22,10 @@ pub struct MakeAccounts <'a>{
     mint_a : &'a AccountView,
     mint_b : &'a AccountView,
     maker_ata_a : &'a AccountView,
+    
     vault_a : &'a AccountView,
-    system_program : &'a AccountView,
     token_program : &'a AccountView,
+    system_program : &'a AccountView,
     
 }
 
@@ -58,7 +59,7 @@ impl<'info>  Make<'info> {
         let bump_binding = [bump];
         let seed_binding = self.data.seed.to_le_bytes();
         let seeds = [
-            Seed::from(crate::ID.as_ref()),
+            Seed::from(Escrow::SEED_PREFIX),
             Seed::from(self.accounts.maker.address().as_ref()),
             Seed::from(&seed_binding),
             Seed::from(&bump_binding)
@@ -74,18 +75,6 @@ impl<'info>  Make<'info> {
 
         }.invoke_signed(&[signer])?;
 
-        let mut escrow_data = self.accounts.escrow.try_borrow_mut()?;
-        let bytes :  &mut [u8] = escrow_data.as_mut();
-        let escrow = Escrow::load_mut( bytes)?;
-        
-        escrow.maker = self.accounts.maker.address().clone();
-        escrow.mint_a = self.accounts.mint_a.address().clone();
-        escrow.mint_b = self.accounts.mint_b.address().clone();
-        escrow.amount = self.data.amount;
-        escrow.receive = self.data.receive;
-        escrow.bump = [bump];
-        escrow.seed = self.data.seed;
-
 
        CreateTokenAccount{
             funding_account : self.accounts.maker,
@@ -100,10 +89,29 @@ impl<'info>  Make<'info> {
         TokenTransfer{
             from : self.accounts.maker_ata_a,
             to:self.accounts.vault_a,
-            authority:self.accounts.escrow,
+            authority:self.accounts.maker,
             amount : self.data.amount,
 
-        }.invoke()
+        }.invoke()?;
+
+
+        let mut escrow_data_arr_= self.accounts.escrow.try_borrow_mut()?;
+        let bytes = escrow_data_arr_.as_mut();
+        let escrow: &mut Escrow = Escrow::load_mut( bytes)?;
+        
+        let maker = self.accounts.maker.address().clone();
+        let mint_a = self.accounts.mint_a.address().clone();
+        let mint_b = self.accounts.mint_b.address().clone();
+        let receive = self.data.receive;
+
+        escrow.maker = maker;
+        escrow.mint_a = mint_a;
+        escrow.mint_b = mint_b;
+
+        escrow.receive = receive;
+        escrow.bump = bump;
+        escrow.seed = self.data.seed;
+        Ok(())
     }
 }
 
@@ -126,8 +134,8 @@ impl <'info>  TryFrom<ArgType<'info>> for Make<'info>{
             return Err(ProgramError::InvalidInstructionData);
         }
         let seed = u64::from_le_bytes(data[0..8].try_into().map_err(|_| ProgramError::InvalidInstructionData)?);
-        let amount = u64::from_le_bytes(data[8..16].try_into().map_err(|_| ProgramError::InvalidInstructionData)?);
-        let receive = u64::from_le_bytes(data[16..24].try_into().map_err(|_| ProgramError::InvalidInstructionData)?);
+        let receive = u64::from_le_bytes(data[8..16].try_into().map_err(|_| ProgramError::InvalidInstructionData)?);
+        let amount = u64::from_le_bytes(data[16..24].try_into().map_err(|_| ProgramError::InvalidInstructionData)?);
 
         let [    
             maker ,
@@ -135,14 +143,15 @@ impl <'info>  TryFrom<ArgType<'info>> for Make<'info>{
             mint_a ,
             mint_b ,
             maker_ata_a ,
+            
             vault_a ,
             system_program ,
-            token_program ] = accounts else {
+            token_program,
+            _
+            
+             ] = accounts else {
                  return Err(ProgramError::NotEnoughAccountKeys);
             };
-
-
-       
 
 
         if !maker.is_signer() {
@@ -161,7 +170,7 @@ impl <'info>  TryFrom<ArgType<'info>> for Make<'info>{
         ata_check(maker_ata_a, 
             maker, 
             token_program,
-            mint_a            
+            mint_a.address()            
             )?;
         // ata_check(vault_a, 
         //     escrow,

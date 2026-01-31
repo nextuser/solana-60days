@@ -3,19 +3,34 @@ use pinocchio::{
     error::ProgramError,
     account::{AccountView}
 };
+
+#[test]
+fn test_size(){
+    println!("Escrow size: {}", Escrow::SIZE);
+}
+
+#[repr(C)]
 pub struct Escrow{
     pub seed : u64,
     pub maker : Address,
     pub mint_a : Address,
     pub mint_b : Address,
-    pub amount : u64,
     pub receive : u64,
-    pub bump : [u8;1],
+    pub bump : u8,
 }
 
+#[test]
+fn test_space(){
+    type Arr1 = [u8;1];
+    assert_eq!(core::mem::size_of::<Arr1>(), 1);
+
+    println!("Address size: {}", Escrow::SIZE);
+}
+use core::mem::size_of;
 impl Escrow {
-    pub const SEED : &'static [u8] = b"escrow";
-    pub const SIZE: usize = core::mem::size_of::<Escrow>();
+    pub const SEED_PREFIX : &'static [u8] = b"escrow";
+    pub const SIZE: usize = size_of::<Address>() * 3 + size_of::<u64>() * 2 + 1;
+    //core::mem::size_of::<Escrow>();
 
     /// Return a `TokenAccount` from the given account view.
     ///
@@ -37,7 +52,10 @@ impl Escrow {
 
     pub fn derive_escrow_pda(maker_key:&Address, seed:u64) -> (Address,u8) {
         
-        Address::find_program_address(&[Self::SEED,maker_key.as_ref(),seed.to_le_bytes().as_ref()], &crate::ID)
+        Address::find_program_address(&[
+            Self::SEED_PREFIX,
+            maker_key.as_ref(),
+            seed.to_le_bytes().as_ref()], &crate::ID)
     }
 
 
