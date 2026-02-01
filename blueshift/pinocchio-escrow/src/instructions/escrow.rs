@@ -9,7 +9,7 @@ fn test_size(){
     println!("Escrow size: {}", Escrow::SIZE);
 }
 
-#[repr(C)]
+#[repr(C,packed)]
 pub struct Escrow{
     pub seed : u64,
     pub maker : Address,
@@ -19,6 +19,10 @@ pub struct Escrow{
     pub bump : u8,
 }
 
+#[test]
+fn test_mem_size(){
+    assert_eq!(core::mem::size_of::<Escrow>(), Escrow::SIZE);
+}
 #[test]
 fn test_space(){
     type Arr1 = [u8;1];
