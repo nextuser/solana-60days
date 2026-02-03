@@ -11,6 +11,8 @@ use pinocchio_token::instructions::{InitializeMint2};
 use pinocchio_system::instructions::{CreateAccount};
 use crate::ArgType;
 use crate::errors::CustomError;
+use crate::state::Config;
+use solana_program_log::log;
 
 pub struct InitializeAccounts<'a>{
     pub initializer : &'a AccountView,
@@ -128,8 +130,9 @@ impl<'info> Initialize<'info>{
         let InitializeAccounts{ initializer, mint_lp, config } = self.accounts;
         let InitializeData{ seed, fee, mint_x, mint_y, config_bump, lp_bump, authority } = self.data;
         let rent = Rent::get()?;
-        let config_lamports = rent.try_minimum_balance(std::mem::size_of::<crate::state::Config>())?;
+        let config_lamports = rent.try_minimum_balance(Config::LEN)?;
         let seed_binding = seed.to_le_bytes();
+        log!("init config len:{}", crate::state::Config::LEN);
 
         let config_seeds = [
             Seed::from(crate::SEED_CONFIG_PREFIX),

@@ -4,6 +4,7 @@ use pinocchio_associated_token_account;
 use pinocchio_token_2022::{ID as TOKEN_2022_PROGRAM_ID,state::TokenAccount as TokenAccount2022};
 use pinocchio::error::ProgramError;
 use pinocchio_token::{ID as TOKEN_PROGRAM_ID, state::{Mint}};
+use solana_program_log::log;
    
 use crate::errors::CustomError;
 #[inline(always)]
@@ -24,9 +25,9 @@ pub unsafe fn from_bytes_unchecked_mut<T>(bytes : &mut [u8]) -> &mut T{
         return Err(ProgramError::InvalidAccountData);
     }
 
-    if account.owned_by(&crate::ID){
-        return Err(ProgramError::InvalidAccountOwner);
-    }
+    // if account.owned_by(&crate::ID){
+    //     return Err(ProgramError::InvalidAccountOwner);
+    // }
 
 
 
@@ -39,12 +40,13 @@ pub unsafe fn from_bytes_unchecked_mut<T>(bytes : &mut [u8]) -> &mut T{
 
  pub fn load<'info,T> (account : &'info  AccountView)-> Result<Ref<'info,T>, ProgramError>{
     if core::mem::size_of::<T>() != account.data_len() {
+        log!("invalid size {}, expected {}", account.data_len(), core::mem::size_of::<T>());
         return Err(ProgramError::InvalidAccountData);
     }
 
-    if account.owned_by(&crate::ID){
-        return Err(ProgramError::InvalidAccountOwner);
-    }
+    // if account.owned_by(&crate::ID){
+    //     return Err(ProgramError::InvalidAccountOwner);
+    // }
 
     Ok(Ref::map(account.try_borrow()?, |bytes| unsafe  {
         from_bytes_unchecked::<T>(bytes)

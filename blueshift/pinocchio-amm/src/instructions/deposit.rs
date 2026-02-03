@@ -8,6 +8,7 @@ use crate::ArgType;
 use crate::errors::CustomError;
 use crate::helper;
 use crate::state::{AmmState,Config};
+use solana_program_log::log;
 use pinocchio::{
     sysvars::{
         Sysvar,
@@ -119,40 +120,60 @@ impl<'info> Deposit<'info>{
             return Err(CustomError::Expired.into());
         }
 
-        let config_info  = helper::load::<Config>(config)
-                        .map_err(|_|{CustomError::NotInitialized})?;
-        let mint_x : Address = config_info.mint_x().as_slice().try_into().map_err(|_| CustomError::AddressConvertError)?;
-        let mint_y : Address = config_info.mint_y().as_slice().try_into().map_err(|_| CustomError::AddressConvertError)?;
-        helper::ata_address_check(user_x_ata.address(), user.address(),     &mint_x, token_program.address())?;
-        helper::ata_address_check(user_y_ata.address(), user.address(), &mint_y, token_program.address())?;
-        let vault_x_info = helper::load::<TokenAccount>(vault_x)
-                    .map_err(|_|{CustomError::LoadValutXFailed})?;
- 
-        let vault_y_info = helper::load::<TokenAccount>(vault_y) 
-                    .map_err(|_|    CustomError::LoadValutYFailed)?;
-        let mint_info = helper::load::<Mint>(mint_lp)?;
-        
+        let config_info  = helper::load::<Config>(config)?;
         if  !config_info.is_match_state(AmmState::Initialized){
             return Err(CustomError::NotInitialized.into());
         }
 
-        let (x,y) =if mint_info.supply() == 0 {
+        let (x_amount,y_amount,lp_supply,seeds) = {
+
+
+            log!("1");
+            let seeds = config_info.get_seeds();            
+
+                            //.map_err(|_|{CustomError::LoadConfigFailed})?;
+            let mint_x : Address = config_info.mint_x().as_slice().try_into().map_err(|_| CustomError::AddressConvertError)?;
+            helper::ata_address_check(user_x_ata.address(), user.address(),     &mint_x, token_program.address())?;
+
+            let mint_y : Address = config_info.mint_y().as_slice().try_into().map_err(|_| CustomError::AddressConvertError)?;
+            helper::ata_address_check(user_y_ata.address(), user.address(), &mint_y, token_program.address())?;
+
+            log!("2");
+            let vault_x_info = TokenAccount::from_account_view(vault_x)
+                        .map_err(|_|{CustomError::LoadValutXFailed})?;
+    
+            let vault_y_info = TokenAccount::from_account_view(vault_y) 
+                        .map_err(|_|    CustomError::LoadValutYFailed)?;
+            let mint_info = Mint::from_account_view(mint_lp)
+                        .map_err(|_|    CustomError::LoadMintFailed)?;
+            let lp_supply = mint_info.supply();
+            let (x_amount,y_amount) = (vault_x_info.amount(),vault_y_info.amount());
+            (x_amount,y_amount,lp_supply,seeds)
+        };
+
+        let signer = Signer::from(seeds.as_slice());
+        
+
+
+        let (x,y) =if lp_supply == 0 {
             (max_x,max_y)
         } else{
             //let const_k = vault_x.amount * vault_y.amount;
             let amounts: constant_product_curve::XYAmounts = ConstantProductCurve::xy_deposit_amounts_from_l(
-                vault_x_info.amount(),
-                vault_y_info.amount(),
-                mint_info.supply(),
+                x_amount,
+                y_amount,
+                lp_supply,
                 amount,
                 crate::PRECISION
             ).map_err(|_|{ProgramError::ArithmeticOverflow})?;
             (amounts.x,amounts.y)
         };
-
+        log!("4");
         if x > max_x  || y > max_y {
             return Err(CustomError::XYExceedMax.into());
         };
+
+        log!("5");
 
         Transfer{
             from : user_x_ata,
@@ -160,23 +181,21 @@ impl<'info> Deposit<'info>{
             authority : user,
             amount : x,
         }.invoke()?;
+        log!("6");
         Transfer{
             from : user_y_ata,
             to : vault_y,
             authority : user,
             amount : y,
-        }.invoke()?;
-
-        let seeds = config_info.get_seeds();
-        let signer = Signer::from(seeds.as_slice());
-        
+        }.invoke()?;        
+        log!("7");
         MintTo{
             mint: mint_lp,
             account : user_lp_ata,
             mint_authority : config,
             amount : amount,
         }.invoke_signed(&[signer])?;
-        
+        log!("8");
         Ok(())
     }
 }

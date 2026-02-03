@@ -1,6 +1,5 @@
 use constant_product_curve::ConstantProduct;
-use pinocchio::ProgramResult;
-use pinocchio::AccountView;
+use pinocchio::{ProgramResult,AccountView,Address};
 use pinocchio::error::ProgramError;
 use pinocchio::{sysvars::Sysvar,
     sysvars::clock::Clock,
@@ -98,7 +97,7 @@ impl<'info> Withdraw<'info>{
 
     pub fn process(&self) ->ProgramResult {
         let clock = Clock::get()?;
-        if clock.unix_timestamp < self.data.expiration {
+        if clock.unix_timestamp > self.data.expiration {
             return Err(CustomError::WithdrawExpired.into());
         }
 
@@ -107,18 +106,29 @@ impl<'info> Withdraw<'info>{
         if !config.is_match_state(AmmState::Initialized) {
             return Err(CustomError::NotInitialized.into());
         }
+        let (lp_supply,vault_x_amount,vault_y_amount) = {
 
-        let mint_lp = helper::load::<Mint>(self.accounts.mint_lp)?;
-        let lp_supply = mint_lp.supply();
-        let valut_x = helper::load::<TokenAccount>(self.accounts.vault_x)?;
-        let valut_y = helper::load::<TokenAccount>(self.accounts.vault_y)?;
+            let mint_lp = helper::load::<Mint>(self.accounts.mint_lp)?;
+            let lp_supply = mint_lp.supply();
+            let vault_x = helper::load::<TokenAccount>(self.accounts.vault_x)?;
+            let vault_y = helper::load::<TokenAccount>(self.accounts.vault_y)?;
+            let mint_x : Address = config.mint_x().as_slice().try_into().map_err(|_| ProgramError::InvalidAccountData)?;
+            let mint_y : Address = config.mint_y().as_slice().try_into().map_err(|_| ProgramError::InvalidAccountData)?;
+            if vault_x.mint().ne( &mint_x)  {
+                return Err(CustomError::InvalidMintOfVaultX.into());
+            }
+            if vault_y.mint().ne(&mint_y) {
+                return Err(CustomError::InvalidMintOfVaultY.into());
+            }
+            (lp_supply,vault_x.amount(),vault_y.amount())
+        };
 
-        let (x,y) = if mint_lp.supply() == self.data.amount {
-            (valut_x.amount(),valut_y.amount())
+        let (x,y) = if lp_supply == self.data.amount {
+            (vault_x_amount,vault_y_amount)
         } else {
             let amounts = ConstantProduct::xy_withdraw_amounts_from_l(
-                valut_x.amount(), 
-                valut_y.amount(), 
+                vault_x_amount, 
+                vault_y_amount, 
                 lp_supply, 
                 self.data.amount, 
                 crate::state::PRECISION).map_err(|_| CustomError::XYExceedMax)?;

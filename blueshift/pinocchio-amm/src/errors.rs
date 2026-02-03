@@ -27,6 +27,11 @@ pub enum CustomError{
     WithdrawAmountTooSmall = 22,
     AddressConvertError = 23,
     SwapFailed = 24,
+    LoadConfigFailed = 25,
+    InvalidMintOfVaultX = 26,
+    InvalidMintOfVaultY = 27,
+    InvalidMintX = 28,
+    InvalidMintY = 29,
 }
 
 

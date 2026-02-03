@@ -97,18 +97,24 @@ impl<'info> Swap<'info>{
             return Err(CustomError::Expired.into());
         }
         let config = Config::load(self.accounts.config)?;
-        if !config.is_match_state(AmmState::Initialized) {
-            return Err(CustomError::InvalidAmmState.into());
-        }
+        let seeds = config.get_seeds();
+        let signer = Signer::from(seeds.as_slice());
+        
+        let (vault_x_amount, vault_y_amount, fee) = {
+            if !config.is_match_state(AmmState::Initialized) {
+                return Err(CustomError::InvalidAmmState.into());
+            }
 
-        let vault_x =  TokenAccount::from_account_view(self.accounts.vault_x)?;
-        let vault_y =  TokenAccount::from_account_view(self.accounts.vault_y)?;
+            let vault_x =  TokenAccount::from_account_view(self.accounts.vault_x)?;
+            let vault_y =  TokenAccount::from_account_view(self.accounts.vault_y)?;
+            (vault_x.amount(), vault_y.amount(), config.fee())
+        };
 
         let mut curve = ConstantProduct::init(
-            vault_x.amount(),
-            vault_y.amount(),
-            vault_x.amount(),
-            config.fee,
+            vault_x_amount,
+            vault_y_amount,
+            vault_x_amount,
+            fee,
             None,
         ).map_err(|_| ProgramError::ArithmeticOverflow)?;
 
@@ -120,8 +126,7 @@ impl<'info> Swap<'info>{
         let swap_result = curve.swap(pair, 
             self.data.amount, 
             self.data.min_output).map_err(|_| {CustomError::SwapFailed})?;
-        let seeds = config.get_seeds();
-        let signer = Signer::from(seeds.as_slice());
+
         if self.data.is_x {
                     
             TokenTransfer{

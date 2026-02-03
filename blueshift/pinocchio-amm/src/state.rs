@@ -8,16 +8,17 @@ use pinocchio::{
 
 use crate::errors::CustomError;
 
-#[repr(C)]
+#[repr(C,packed)]
 pub struct Config {
     pub state : u8,
     pub seed : [u8;8],
-    pub fee : u16,
+    pub authority : [u8;32],
     pub mint_x : [u8; 32],
     pub mint_y : [u8; 32],
+    pub fee : [u8;2],
     pub config_bump : [u8;1],
-    pub lp_bump : [u8;1],   
-    authority : [u8;32],
+    //pub lp_bump : [u8;1],   
+    
     
 }
 
@@ -27,6 +28,8 @@ pub const SEED_MINT_LP_PREFIX : &[u8] = b"mint_lp";
 #[test]
 fn test_space_arr(){
     println!("arr size of [u8;1]: {}", size_of::<[u8; 1]>());
+    println!("size of config : {}", size_of::<Config>());
+    println!("config len :{}",Config::LEN);
 }
 
 pub const PRECISION: u32 = 10u32.pow(6);
@@ -73,9 +76,9 @@ impl<'info> Config{
         self.authority = authority;
         self.mint_x = mint_x;
         self.mint_y = mint_y;
-        self.seed = seed.to_be_bytes();
-        self.fee = fee;
-        self.lp_bump = lp_bump;
+        self.seed = seed.to_le_bytes();
+        self.fee = fee.to_le_bytes();
+        //self.lp_bump = lp_bump;
         self.config_bump = config_bump;
         self.authority = authority;
     }
@@ -93,7 +96,7 @@ impl<'info> Config{
         u64::from_le_bytes(self.seed)
     }
     pub fn fee(&self) -> u16 {
-        self.fee
+        u16::from_le_bytes(self.fee)
     }
 
     pub fn authority(&self) -> &[u8;32] {
