@@ -27,6 +27,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9330f8b2ff13f34540b44e946ef35111825727b38d33286ef986142615121801"
 
 [[package]]
+name = "constant-product-curve"
+version = "0.1.0"
+
+[[package]]
 name = "cpufeatures"
 version = "0.2.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -149,6 +153,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "pinocchio-amm"
+version = "0.1.0"
+dependencies = [
+ "constant-product-curve",
+ "pinocchio",
+ "pinocchio-associated-token-account",
+ "pinocchio-system",
+ "pinocchio-token",
+ "pinocchio-token-2022",
+ "solana-account-view",
+ "solana-address",
+ "solana-program-log",
+]
+
+[[package]]
 name = "pinocchio-associated-token-account"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -158,20 +177,6 @@ dependencies = [
  "solana-address",
  "solana-instruction-view",
  "solana-program-error",
-]
-
-[[package]]
-name = "pinocchio-escrow"
-version = "0.1.0"
-dependencies = [
- "pinocchio",
- "pinocchio-associated-token-account",
- "pinocchio-system",
- "pinocchio-token",
- "pinocchio-token-2022",
- "solana-account-view",
- "solana-address",
- "solana-program-log",
 ]
 
 [[package]]
